@@ -1,0 +1,129 @@
+__________________________________________________________________________________________
+
+
+TASK 2: TCP and UDP Ports
+
+Open: indicates that a service is listening on the specified port.
+Closed: indicates that no service is listening on the specified port, although the port is accessible. By accessible, we mean that it is reachable and is not blocked by a firewall or other security appliances/programs.
+Filtered: means that Nmap cannot determine if the port is open or closed because the port is not accessible. This state is usually due to a firewall preventing Nmap from reaching that port. Nmap’s packets may be blocked from reaching the port; alternatively, the responses are blocked from reaching Nmap’s host.
+Unfiltered: means that Nmap cannot determine if the port is open or closed, although the port is accessible. This state is encountered when using an ACK scan -sA.
+Open|Filtered: This means that Nmap cannot determine whether the port is open or filtered.
+Closed|Filtered: This means that Nmap cannot decide whether a port is closed or filtered.
+
+__________________________________________________________________________________________
+
+
+TASK 4: Connect Scan 
+
+If you are not a privileged user (root or sudoer), a TCP connect scan is the only possible option to discover open TCP ports.
+By default, Nmap will attempt to connect to the 1000 most common ports.
+
+To illustrate the -sT (TCP connect scan):
+           
+    pentester@TryHackMe$ nmap -sT 10.48.132.110
+
+    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
+    Nmap scan report for 10.48.132.110
+    Host is up (0.0024s latency).
+    Not shown: 995 closed ports
+    PORT    STATE SERVICE
+    22/tcp  open  ssh
+    25/tcp  open  smtp
+    80/tcp  open  http
+    111/tcp open  rpcbind
+    143/tcp open  imap
+    993/tcp open  imaps
+    995/tcp open  pop3s
+    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+
+    Nmap done: 1 IP address (1 host up) scanned in 0.40 seconds
+
+Note that we can use -F to enable fast mode and decrease the number of scanned ports from 1000 to 100 most common ports.
+Use the -r option to scan ports in consecutive order instead of random. 
+This helps test if ports open consistently, e.g., during a target's boot-up.
+
+__________________________________________________________________________________________
+
+
+TASK 5: TCP SYN Scan 
+
+Unprivileged users can only perform connect scans, while SYN scans (default) require root or sudo privileges. 
+SYN scans avoid completing the TCP 3-way handshake, reducing the chance of detection. 
+Use the -sS option to perform a SYN scan.
+  
+    pentester@TryHackMe$ sudo nmap -sS 10.48.142.27
+
+    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
+    Nmap scan report for 10.48.142.27
+    Host is up (0.0073s latency).
+    Not shown: 994 closed ports
+    PORT    STATE SERVICE
+    22/tcp  open  ssh
+    25/tcp  open  smtp
+    80/tcp  open  http
+    110/tcp open  pop3
+    111/tcp open  rpcbind
+    143/tcp open  imap
+    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+
+    Nmap done: 1 IP address (1 host up) scanned in 1.60 seconds
+
+__________________________________________________________________________________________
+
+
+TASK 6: UDP Scan 
+
+Sending a UDP packet to an open port won’t tell us anything.
+The UDP ports that don’t generate any unreachable response are the ones that Nmap will state as open.
+           
+    pentester@TryHackMe$ sudo nmap -sU 10.49.147.23
+
+    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:54 BST
+    Nmap scan report for 10.49.147.23
+    Host is up (0.00061s latency).
+    Not shown: 998 closed ports
+    PORT    STATE         SERVICE
+    68/udp  open|filtered dhcpc
+    111/udp open          rpcbind
+    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+
+    Nmap done: 1 IP address (1 host up) scanned in 1085.05 seconds
+
+__________________________________________________________________________________________
+
+
+TASK 7: Fine-Tuning Scope and Performance 
+
+Scan specific ports with -p22,80,443, a range with -p1-1023, or all ports with -p-. 
+Use -F for the top 100 ports or --top-ports <n> for the top <n> ports.
+
+Control scan timing with -T<0-5>, where -T0 is the slowest (paranoid) and -T5 is the fastest (insane). 
+-T0 and -T1 are stealthier, while -T4 is common for CTFs. 
+Aggressive timing (-T5) may reduce accuracy due to packet loss.
+
+Adjust rates with --min-rate <num> and --max-rate <num>, e.g., --max-rate=10 limits to 10 packets/sec. 
+Control parallelism with --min-parallelism <num> and --max-parallelism <num>, e.g., --min-parallelism=512 ensures 512+ probes in parallel.
+
+-T<0-5> 	            -T0 being the slowest and T5 the fastest
+--max-rate 50           rate <= 50 packets/sec
+--min-rate 15           rate >= 15 packets/sec
+--min-parallelism 100   at least 100 probes in parallel
+
+__________________________________________________________________________________________
+
+
+Appendix:
+
+TCP Connect Scan (-sT)
+    Privilege Requirement   : Does not require root or sudo privileges; can be performed by unprivileged users.
+    Mechanism               : Completes the full TCP 3-way handshake (SYN, SYN-ACK, ACK) to determine if a port is open.
+    Detection               : Easier to detect by firewalls and intrusion detection systems (IDS) because the connection is fully established.
+    Performance             : Slower compared to SYN scans because it establishes and tears down a full connection for each port.
+    Use Case                : Suitable when you do not have elevated privileges or when stealth is not a concern.
+
+TCP SYN Scan (-sS)
+    Privilege Requirement   : Requires root or sudo privileges to send raw packets.
+    Mechanism               : Sends a SYN packet and waits for a SYN-ACK response. If received, the port is open. The connection is not completed (no final ACK is sent), making it a "half-open" scan.
+    Detection               : Harder to detect by firewalls and IDS because the connection is never fully established.
+    Performance             : Faster and more efficient than a connect scan because it avoids the overhead of completing the handshake.
+    Use Case                : Preferred for stealthy and efficient scanning when you have elevated privileges.

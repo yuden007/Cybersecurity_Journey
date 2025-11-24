@@ -1,0 +1,116 @@
+__________________________________________________________________________________________
+
+
+TASK 1: Introduction
+
+Which systems are up on a network?
+What services are running on these systems on the network?
+USE nmap.
+
+We present the different approaches that Nmap uses to discover live hosts. 
+    ARP scan: This scan uses ARP requests to discover live hosts
+    ICMP scan: This scan uses ICMP requests to identify live hosts
+    TCP/UDP ping scan: This scan sends packets to TCP ports and UDP ports to determine live hosts.
+
+
+__________________________________________________________________________________________
+
+
+TASK 3: Enumerating Targets 
+
+list: MACHINE_IP scanme.nmap.org example.com will scan 3 IP addresses.
+range: 10.11.12.15-20 will scan 6 IP addresses: 10.11.12.15, 10.11.12.16,… and 10.11.12.20.
+subnet: MACHINE_IP/30 will scan 4 IP addresses.
+
+You can also provide a file of target list, nmap -iL list_of_hosts.txt.
+
+To list hosts without scanning them. 
+    nmap -sL TARGETS
+To performs reverse-DNS resolution to get hostnames, which can reveal useful info. 
+    -n
+To sacn host discovery only
+    -sn
+
+__________________________________________________________________________________________
+
+
+TASK 5: ARP 
+
+nmap
+    If you want to use Nmap to discover online hosts without port-scanning the live systems
+        sudo nmap -sn TARGETS
+    If you want to use Nmap to discover online hosts without port-scanning the live systems
+        sudo nmap -sn TARGETS
+
+arp-scan
+    Send ARP queries to ALL VALID IP on local network.
+        sudo arp-scan --localhost OR arp-scan -l
+    Send ARP queries for ALL VALID IP on the eth0 interface
+        sudo arp-scan -I eth0 -l
+
+__________________________________________________________________________________________
+
+
+TASK 6: ICMP 
+
+To use ICMP echo request to discover live hosts, add the option -PE
+    sudo nmap -PE -sn MACHINE_IP/24
+
+ICMP echo requests may be blocked. Use `-PP` for ICMP timestamp requests to check if a system is online.
+    sudo nmap -PP -sn 10.10.68.220/24
+
+In an attempt to discover live hosts using ICMP address mask queries, 
+    sudo nmap -PM -sn MACHINE_IP/24. 
+
+__________________________________________________________________________________________
+
+
+TASK 7: TCP and UDP 
+
+TCP SYN ping
+    To use TCP SYN ping to discover live hosts, add the option -PS. Port 80 by default.
+    Privileged users (root and sudoers) can send TCP SYN packets and don’t need to complete the TCP 3-way handshake even if the port is open. 
+    Unprivileged users have no choice but to complete the 3-way handshake if the port is open.
+    An open port should reply with a SYN/ACK (Acknowledge); a closed port would result in an RST (Reset).
+        -PS21 target port 21
+        -PS21-25 target ports 21, 22, 23, 24 and 25
+        -PS80,443,8080 target port 80, 443 and 8080
+        sudo nmap -PS -sn MACHINE_IP/24
+
+TCP ACK ping
+    You must be running Nmap as a privileged user to be able to accomplish this. 
+    If you try it as an unprivileged user, Nmap will attempt a 3-way handshake.
+        sudo nmap -PA -sn MACHINE_IP/24
+
+UDP ping
+    Contrary to TCP SYN ping, sending a UDP packet to an open port is not expected to lead to any reply. 
+    Sending a UDP packet to an open UDP port and not triggering any response. 
+    Sending a UDP packet to any closed UDP port can trigger a response indirectly indicating that the target is online. 
+        sudo nmap -PU -sn 10.10.68.220/24
+
+Masscan
+    Masscan is quite aggressive alternative with the rate of packets it generates. 
+    The syntax is quite similar: -p can be followed by a port number, list, or range. 
+        masscan MACHINE_IP/24 -p443
+        masscan MACHINE_IP/24 -p80,443
+        masscan MACHINE_IP/24 -p22-25
+        masscan MACHINE_IP/24 ‐‐top-ports 100
+
+__________________________________________________________________________________________
+
+
+TASK 8: Reverse-DNS Lookup 
+
+Nmap’s default behaviour is to use reverse-DNS online hosts. Because the hostnames can reveal many helpful info.
+However, if you don’t want to send such DNS queries, you use:
+    -n
+
+By default, Nmap will look up online hosts.
+However, you can use the option -R to query the DNS server even for offline hosts. 
+If you want to use a specific DNS server, you can add:
+    --dns-servers DNS_SERVER
+
+__________________________________________________________________________________________
+
+
+Appendix:
