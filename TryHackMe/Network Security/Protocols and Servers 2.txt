@@ -1,0 +1,154 @@
+__________________________________________________________________________________________
+
+
+TASK 2: Sniffing Attack
+
+A sniffing attack can be performed using an Ethernet network card with proper permissions (root/admin). Tools include:
+
+    Tcpdump: Open-source CLI tool for packet capture.
+    Wireshark: Open-source GUI tool for multiple OS.
+    Tshark: CLI alternative to Wireshark.
+
+To capture a user's email credentials using POP3, we used the command `sudo tcpdump port 110 -A`. 
+This requires access to network traffic, which can be achieved via a wiretap, port mirroring, or a successful Man-in-the-Middle (MITM) attack.
+
+Packet capture requires root privileges. 
+POP3 traffic was filtered using port 110, and -A displayed packet contents in ASCII format.
+
+    /*************************************************************************************
+    * pentester@TryHackMe$ sudo tcpdump port 110 -A
+    * [...]
+    * 09:05:15.132861 IP 10.20.30.1.58386 > 10.20.30.148.pop3: Flags [P.], seq 1:13, ack 19, win 502, options [nop,nop,TS val 423360697 ecr 3958275530], length 12
+    * E..@.V@.@.g.
+    * ...
+    * ......n......"............
+    * .;....}.USER frank
+    *
+    * 09:05:15.133465 IP 10.20.30.148.pop3 > 10.20.30.1.58386: Flags [.], ack 13, win 510, options [nop,nop,TS val 3958280553 ecr 423360697], length 0
+    * E..4..@.@.O~
+    * ...
+    * ....n....".........?P.....
+    * ...i.;..
+    * 09:05:15.133610 IP 10.20.30.148.pop3 > 10.20.30.1.58386: Flags [P.], seq 19:43, ack 13, win 510, options [nop,nop,TS val 3958280553 ecr 423360697], length 24
+    * E..L..@.@.Oe
+    * ...
+    * ....n....".........<-.....
+    * ...i.;..+OK Password required.
+    *
+    * 09:05:15.133660 IP 10.20.30.1.58386 > 10.20.30.148.pop3: Flags [.], ack 43, win 502, options [nop,nop,TS val 423360698 ecr 3958280553], length 0
+    * E..4.W@.@.g.
+    * ...
+    * ......n......".....??.....
+    * .;.....i
+    * 09:05:22.852695 IP 10.20.30.1.58386 > 10.20.30.148.pop3: Flags [P.], seq 13:28, ack 43, win 502, options [nop,nop,TS val 423368417 ecr 3958280553], length 15
+    * E..C.X@.@.g.
+    * ...
+    * ......n......".....6......
+    * .<.....iPASS D2xc9CgD
+    * [...]
+    *************************************************************************************/
+
+Mitigation involves using encryption like TLS for protocols (HTTP, FTP, SMTP, POP3, IMAP) and replacing Telnet with SSH for secure remote access.
+
+__________________________________________________________________________________________
+
+
+TASK 3: Man-in-the-Middle attack (MITM)
+
+HTTP browsing is vulnerable to MITM attacks, often undetectable. 
+Tools like Ettercap and Bettercap facilitate such attacks. 
+Cleartext protocols (FTP, SMTP, POP3) are also at risk. 
+Mitigation involves encryption (e.g., TLS) and proper authentication using PKI and trusted certificates.
+
+__________________________________________________________________________________________
+
+
+TASK 4: Transport Layer Security (TLS)   
+
+Encryption can be added at the presentation layer of the ISO/OSI model, ensuring data is transmitted as ciphertext.
+
+    7 Application Layer : HTTP, FTP, SMTP, POP3, IMAP, etc 
+    6 Presentation Layer: SSL, TLS
+
+TLS has replaced SSL due to improved security. 
+While SSL is still widely mentioned, modern servers predominantly use TLS.
+
+Protocol    Default Port   Secured Protocol    Default Port with TLS
+HTTP        80             HTTPS               443
+FTP         21             FTPS                990
+SMTP        25             SMTPS               465
+POP3        110            POP3S               995
+IMAP        143            IMAPS               993
+
+HTTPS requires an additional step to encrypt the traffic:
+
+    1. Establish a TCP connection
+    2. Establish SSL/TLS connection (not in HTTP)
+    3. Send HTTP requests to the webserver
+
+Below shows further details of SSL/TLS:
+
+    1. The client sends a ClientHello to the server to indicate its capabilities, such as supported algorithms.
+    2. The server responds with a ServerHello, indicating the selected connection parameters. The server provides its certificate if server authentication is required. The certificate is a digital file to identify itself; it is usually digitally signed by a third party. Moreover, it might send additional information necessary to generate the master key, in its ServerKeyExchange message, before sending the ServerHelloDone message to indicate that it is done with the negotiation.
+    3. The client responds with a ClientKeyExchange, which contains additional information required to generate the master key. Furthermore, it switches to use encryption and informs the server using the ChangeCipherSpec message.
+    4. The server switches to use encryption as well and informs the client in the ChangeCipherSpec message.
+
+__________________________________________________________________________________________
+
+
+TASK 5: ssh and scp 
+
+SCP (Secure Copy Protocol) uses SSH to transfer files. 
+
+To copy `archive.tar.gz` from the remote `/home/mark` to the local home directory. 
+    scp mark@10.49.133.132:/home/mark/archive.tar.gz ~
+
+To upload: copies `backup.tar.bz2` to the remote `/home/mark`.
+    scp backup.tar.bz2 mark@10.49.133.132:/home/mark/
+
+__________________________________________________________________________________________
+
+
+TASK 6: Password Attack
+
+THC Hydra automates password attacks for protocols like FTP, POP3, IMAP, SMTP, SSH, and HTTP. Syntax:  
+hydra -l username -P wordlist.txt server service  
+
+Options:  
+- `-l username`: Target username.  
+- `-P wordlist.txt`: Password list file.  
+- `server`: Target hostname/IP.  
+- `service`: Target service.  
+
+Consider the following concrete examples:
+
+    hydra -l mark -P /usr/share/wordlists/rockyou.txt 10.49.133.132 ftp will use mark as the username as it iterates over the provided passwords against the FTP server.
+    hydra -l mark -P /usr/share/wordlists/rockyou.txt ftp://10.49.133.132 is identical to the previous example. 10.49.133.132 ftp is the same as ftp://10.49.133.132.
+    hydra -l frank -P /usr/share/wordlists/rockyou.txt 10.49.133.132 ssh will use frank as the user name as it tries to login via SSH using the different passwords.
+
+There are some extra optional arguments that you can add:
+
+    -s PORT: Specify a non-default port for the service.  
+    -V or -vV: Enable verbose mode to show attempted username/password combinations.  
+    -t n: Set the number of parallel connections (e.g., -t 16 for 16 threads).  
+    -d: Enable debugging for detailed output, useful for troubleshooting.  
+
+__________________________________________________________________________________________
+
+
+Appendix:
+
+Protocol    TCP Port    Application(s)              Data Security
+FTP         21          File Transfer               Cleartext
+FTPS        990         File Transfer               Encrypted
+HTTP        80          Worldwide Web               Cleartext
+HTTPS       443         Worldwide Web               Encrypted
+IMAP        143         Email (MDA)                 Cleartext
+IMAPS       993         Email (MDA)                 Encrypted
+POP3        110         Email (MDA)                 Cleartext
+POP3S       995         Email (MDA)                 Encrypted
+SFTP        22          File Transfer               Encrypted
+SSH         22          Remote Access/File Transfer Encrypted
+SMTP        25          Email (MTA)                 Cleartext
+SMTPS       465         Email (MTA)                 Encrypted
+Telnet      23          Remote Access               Cleartext

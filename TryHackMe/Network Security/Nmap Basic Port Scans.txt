@@ -131,3 +131,20 @@ TCP SYN Scan (-sS)
     Detection               : Harder to detect by firewalls and IDS because the connection is never fully established.
     Performance             : Faster and more efficient than a connect scan because it avoids the overhead of completing the handshake.
     Use Case                : Preferred for stealthy and efficient scanning when you have elevated privileges.
+
+Port Scan Type      Example Command
+------------------  ---------------------
+TCP Connect Scan    nmap -sT MACHINE_IP
+TCP SYN Scan        sudo nmap -sS MACHINE_IP
+UDP Scan            sudo nmap -sU MACHINE_IP
+
+Option                  Pupose
+------------------      ---------------------
+-p-                     Scan all ports
+-p1-1023                Scan ports 1 to 1023
+-F                      Scan 100 most common ports
+-r                      Scan ports in consecutive order
+-T<0-5>                 -T0 being the slowest and T5 the fastest
+--max-rate 50           Limit rate to <= 50 packets/sec
+--min-rate 15           Limit rate to >= 15 packets/sec
+--min-parallelism 100   Ensure at least 100 probes in parallel

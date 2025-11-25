@@ -95,3 +95,15 @@ ________________________________________________________________________________
 
 
 Appendix:
+
+Command Summary Table:
+
+| Task                          | Command                                      | Description                                                                 |
+|-------------------------------|----------------------------------------------|-----------------------------------------------------------------------------|
+| Lookup WHOIS record           | whois tryhackme.com                         | Retrieves WHOIS information for the domain.                                |
+| Lookup DNS A records          | nslookup -type=A tryhackme.com              | Finds all IPv4 addresses for the domain.                                   |
+| Lookup DNS MX records         | nslookup -type=MX tryhackme.com 1.1.1.1     | Finds email servers and configurations for the domain using a DNS server.  |
+| Lookup DNS TXT records        | nslookup -type=TXT tryhackme.com            | Retrieves TXT records for the domain.                                      |
+| Lookup DNS A records          | dig tryhackme.com A                         | Retrieves IPv4 addresses for the domain.                                   |
+| Lookup DNS MX records         | dig @1.1.1.1 tryhackme.com MX               | Finds email servers using a specific DNS server.                           |
+| Lookup DNS TXT records        | dig tryhackme.com TXT                       | Retrieves TXT records for the domain.                                      |
