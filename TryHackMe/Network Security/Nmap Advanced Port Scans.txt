@@ -8,66 +8,72 @@ Null Scan
     Open ports do not respond, while closed ports send an RST packet. 
     Lack of an RST indicates the port is open or filtered.
            
-        pentester@TryHackMe$ sudo nmap -sN 10.49.173.173
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:30 BST
-        Nmap scan report for 10.49.173.173
-        Host is up (0.00066s latency).
-        Not shown: 994 closed ports
-        PORT    STATE         SERVICE
-        22/tcp  open|filtered ssh
-        25/tcp  open|filtered smtp
-        80/tcp  open|filtered http
-        110/tcp open|filtered pop3
-        111/tcp open|filtered rpcbind
-        143/tcp open|filtered imap
-        MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 96.50 seconds
+        /*************************************************************************************
+        * pentester@TryHackMe$ sudo nmap -sN 10.49.173.173
+        *
+        * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:30 BST
+        * Nmap scan report for 10.49.173.173
+        * Host is up (0.00066s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE         SERVICE
+        * 22/tcp  open|filtered ssh
+        * 25/tcp  open|filtered smtp
+        * 80/tcp  open|filtered http
+        * 110/tcp open|filtered pop3
+        * 111/tcp open|filtered rpcbind
+        * 143/tcp open|filtered imap
+        * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+        *
+        * Nmap done: 1 IP address (1 host up) scanned in 96.50 seconds
+        *************************************************************************************/
 
 FIN Scan
     The FIN scan (-sF) sends a TCP packet with the FIN flag set. 
     Open ports do not respond, while closed ports send an RST. 
     Firewalls may drop traffic silently, making ports appear open|filtered.
    
-        pentester@TryHackMe$ sudo nmap -sF 10.49.173.173
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:32 BST
-        Nmap scan report for 10.49.173.173
-        Host is up (0.0018s latency).
-        Not shown: 994 closed ports
-        PORT    STATE         SERVICE
-        22/tcp  open|filtered ssh
-        25/tcp  open|filtered smtp
-        80/tcp  open|filtered http
-        110/tcp open|filtered pop3
-        111/tcp open|filtered rpcbind
-        143/tcp open|filtered imap
-        MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 96.52 seconds
+        /*************************************************************************************
+        * pentester@TryHackMe$ sudo nmap -sF 10.49.173.173
+        *
+        * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:32 BST
+        * Nmap scan report for 10.49.173.173
+        * Host is up (0.0018s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE         SERVICE
+        * 22/tcp  open|filtered ssh
+        * 25/tcp  open|filtered smtp
+        * 80/tcp  open|filtered http
+        * 110/tcp open|filtered pop3
+        * 111/tcp open|filtered rpcbind
+        * 143/tcp open|filtered imap
+        * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+        *
+        * Nmap done: 1 IP address (1 host up) scanned in 96.52 seconds
+        *************************************************************************************/
 
 Xmas Scan
     The Xmas scan (-sX) sets the FIN, PSH, and URG flags. 
     Open ports do not respond, while closed ports send an RST. 
     Ports are reported as open|filtered if no RST is received.
             
-        pentester@TryHackMe$ sudo nmap -sX 10.49.173.173
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:34 BST
-        Nmap scan report for 10.49.173.173
-        Host is up (0.00087s latency).
-        Not shown: 994 closed ports
-        PORT    STATE         SERVICE
-        22/tcp  open|filtered ssh
-        25/tcp  open|filtered smtp
-        80/tcp  open|filtered http
-        110/tcp open|filtered pop3
-        111/tcp open|filtered rpcbind
-        143/tcp open|filtered imap
-        MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 84.85 seconds
+        /*************************************************************************************
+        * pentester@TryHackMe$ sudo nmap -sX 10.49.173.173
+        *
+        * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:34 BST
+        * Nmap scan report for 10.49.173.173
+        * Host is up (0.00087s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE         SERVICE
+        * 22/tcp  open|filtered ssh
+        * 25/tcp  open|filtered smtp
+        * 80/tcp  open|filtered http
+        * 110/tcp open|filtered pop3
+        * 111/tcp open|filtered rpcbind
+        * 143/tcp open|filtered imap
+        * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+        *
+        * Nmap done: 1 IP address (1 host up) scanned in 84.85 seconds
+        *************************************************************************************/
 
 These scans are effective against stateless firewalls, which detect SYN packets to block connections. 
 By avoiding SYN flags, they can bypass such firewalls. 
@@ -84,214 +90,17 @@ This scan is rarely effective on modern networks but helps illustrate port scann
 Most systems send an RST regardless of port state, making open ports hard to identify.
 Since open ports and closed ports are behaving the same way, the Maimon scan could not discover any open ports. 
            
-    pentester@TryHackMe$ sudo nmap -sM 10.10.252.27
-
-    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:36 BST
-    Nmap scan report for ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27)
-    Host is up (0.00095s latency).
-    All 1000 scanned ports on ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27) are closed
-    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-    Nmap done: 1 IP address (1 host up) scanned in 1.61 seconds
-
-__________________________________________________________________________________________
-
-
-TASK 4: TCP ACK, Window, and Custom Scan 
-
-TCP ACK Scan
-    A TCP ACK scan (-sA) sends packets with the ACK flag set. 
-    The target responds with RST regardless of port state, as ACK packets are typically sent to acknowledge received data. 
-    This scan does not reveal whether ports are open.
-      
-        pentester@TryHackMe$ sudo nmap -sA 10.49.185.230
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:37 BST
-        Nmap scan report for 10.49.185.230
-        Host is up (0.0013s latency).
-        All 1000 scanned ports on 10.49.185.230 are unfiltered
-        MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 1.68 seconds
-            
-    This scan helps identify firewall rules by revealing which ACK packets receive responses. 
-    After configuring a firewall on target 10.49.185.230, we repeated the scan and found three unblocked ports, indicating the firewall blocks all others.
-
-        pentester@TryHackMe$ sudo nmap -sA 10.49.185.230
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-09-07 11:34 BST
-        Nmap scan report for 10.49.185.230
-        Host is up (0.00046s latency).
-        Not shown: 997 filtered ports
-        PORT    STATE      SERVICE
-        22/tcp  unfiltered ssh
-        25/tcp  unfiltered smtp
-        80/tcp  unfiltered http
-        MAC Address: 02:78:C0:D0:4E:E9 (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 15.45 seconds
-      
-Window Scan
-
-    The TCP window scan (-sW) is similar to the ACK scan but examines the TCP Window field of returned RST packets. 
-    On some systems, this can reveal open ports. 
-    However, scanning a Linux system without a firewall typically provides no additional information compared to an ACK scan.
-
-        pentester@TryHackMe$ sudo nmap -sW 10.49.185.230
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:38 BST
-        Nmap scan report for 10.49.185.230
-        Host is up (0.0011s latency).
-        All 1000 scanned ports on ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27) are closed
-        MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 1.60 seconds
-            
-    Repeating the TCP window scan against a server behind a firewall yields more insightful results. 
-    The scan identified three ports as closed, contrasting with the ACK scan, which marked them as unfiltered. 
-    This difference suggests the firewall does not block these ports.
-
-        pentester@TryHackMe$ sudo nmap -sW 10.49.185.230
-
-        Starting Nmap 7.60 ( https://nmap.org ) at 2021-09-07 11:39 BST
-        Nmap scan report for 10.49.185.230
-        Host is up (0.00040s latency).
-        Not shown: 997 filtered ports
-        PORT    STATE  SERVICE
-        22/tcp  closed ssh
-        25/tcp  closed smtp
-        80/tcp  closed http
-        MAC Address: 02:78:C0:D0:4E:E9 (Unknown)
-
-        Nmap done: 1 IP address (1 host up) scanned in 14.84 seconds
-
-Custom Scan
-    To experiment with custom TCP flag combinations, use --scanflags. 
-    For example, to set SYN, RST, and FIN simultaneously, use --scanflags RSTSYNFIN. Understanding port behavior is crucial for interpreting results correctly.
-    ACK and window scans effectively map firewall rules but do not confirm services on unblocked ports. 
-    Unblocked ports may lack active services, or firewall rules may be outdated. 
-    These scans reveal firewall behavior, not service availability.
+    /*************************************************************************************
+    * pentester@TryHackMe$ sudo nmap -sM 10.10.252.27
+    *
+    * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:36 BST
+    * Nmap scan report for ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27)
+    * Host is up (0.00095s latency).
+    * All 1000 scanned ports on ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27) are closed
+    * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+    *
+    * Nmap done: 1 IP address (1 host up) scanned in 1.61 seconds
+    *************************************************************************************/
 
 __________________________________________________________________________________________
 
-
-TASK 5: Spoofing and Decoys
-
-Spoofing
-    An attacker can use `nmap -S SPOOFED_IP 10.49.185.230` to spoof the source IP as SPOOFED_IP. 
-    The target replies to SPOOFED_IP, so the attacker must monitor network traffic to analyze responses. 
-    Accurate results depend on proper traffic monitoring.
-
-    In brief, scanning with a spoofed IP address is three steps:
-        Attacker sends a packet with a spoofed source IP address to the target machine.
-        Target machine replies to the spoofed IP address as the destination.
-        Attacker captures the replies to figure out open ports.
-
-    To specify the network interface, use `-e`, and disable ping scan with `-Pn`. For example:  
-        nmap -e NET_INTERFACE -Pn -S SPOOFED_IP 10.49.185.230 
-    This ensures Nmap uses the correct interface and doesn't expect ping replies. 
-    Note: This scan is ineffective if the attacker cannot monitor network responses.
-
-    When on the same subnet as the target machine, you can spoof your MAC address using: 
-        --spoof-mac SPOOFED_MAC. 
-    This works only if both the attacker and target are on the same Ethernet (802.3) or WiFi (802.11) network.
-
-Decoys
-    Spoofing is rarely effective due to strict conditions. 
-    Instead, attackers may use decoys to obscure their identity. 
-    By making scans appear from multiple IPs, the attacker's IP is hidden among them. 
-    Replies are sent to the decoys, complicating traceability.
-
-    Launch a decoy scan with `-D` followed 10.10.0.1, 10.10.0.2, and your IP (ME).  
-        nmap -D 10.10.0.1,10.10.0.2,ME 10.49.185.230
-    To add two random IPs (RND) as decoys. Each execution generates new random IPs:
-        nmap -D 10.10.0.1,10.10.0.2,RND,RND,ME 10.49.185.230 
-
-
-__________________________________________________________________________________________
-
-
-TASK 6: Fragmented Packets 
-
-Firewall
-    A firewall is software or hardware that controls network traffic based on rules. 
-    It can block or allow packets by inspecting IP and transport layer headers, and sometimes the data. 
-    For example, it may block all traffic except to a web server.
-
-IDS
-    An intrusion detection system (IDS) inspects network packets for patterns or signatures, raising alerts for malicious activity. 
-    Unlike firewalls, IDS examines packet data for threats. 
-    To evade detection, attackers may fragment packets, making it harder for IDS to analyze them effectively.
-
-Fragmented Packets
-    Use `-f` in Nmap to fragment packets into 8-byte segments. 
-    Adding `-f -f` (or `-ff`) creates 16-byte fragments. To customize, use `--mtu` with a multiple of 8.
-
-    Key fields include the 32-bit source and destination addresses.  
-    The Data component in anIP packet is be fragmented. 
-    Reassembly uses the identification (ID) and fragment offset fields.
-
-    To increase packet size and make them appear innocuous, use --data-length NUM, where NUM specifies the number of bytes to append.
-
-__________________________________________________________________________________________
-
-
-TASK 7: Idle/Zombie Scan 
-
-Spoofing the source IP can enable stealthy scanning but is limited to setups where traffic monitoring is possible. 
-Despite these constraints, the idle scan enhances this technique by leveraging an idle host to mask the attacker's identity.
-
-The idle scan (zombie scan) uses an idle host to mask the attacker's identity. 
-Nmap sends probes spoofed as if from the idle host and checks its IP ID to infer responses. 
-Run an idle scan where `ZOMBIE_IP` is the idle host's IP.
-    nmap -sI ZOMBIE_IP 10.49.185.230
-
-The idle (zombie) scan requires the following three steps to discover whether a port is open:
-    Trigger the idle host to respond so that you can record the current IP ID on the idle host.
-    Send a SYN packet to a TCP port on the target. The packet should be spoofed to appear as if it was coming from the idle host (zombie) IP address.
-    Trigger the idle machine again to respond so that you can compare the new IP ID with the one received earlier.
-
-An idle scan uses an idle host (e.g., a printer) to mask the attacker's identity. 
-The attacker probes the idle host with a SYN/ACK, receiving an RST with its current IP ID. 
-Then, the attacker sends a SYN to the target, spoofing the idle host's IP. 
-
-Three scenarios arise:
-    1. **Closed Port**: Target replies to the idle host with RST; idle host's IP ID remains unchanged.
-    2. **Open Port**: Target replies with SYN/ACK; idle host responds with RST, incrementing its IP ID.
-    3. **Filtered Port**: No response; idle host's IP ID remains unchanged.
-
-Finally, the attacker probes the idle host again to compare IP IDs. 
-A difference of 1 indicates a closed/filtered port, while 2 indicates an open port. 
-Accuracy depends on the idle host being truly idle.
-
-__________________________________________________________________________________________
-
-
-TASK 8: Getting More Details 
-
-Add --reason to Nmap scans for detailed reasoning behind its conclusions. For example:  
-Add -v or -vv for more detailed info.
-Add -d or -dd for more debugging info.
-           
-    pentester@TryHackMe$ sudo nmap -sS --reason 10.10.252.27
-
-    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 10:40 BST
-    Nmap scan report for ip-10-10-252-27.eu-west-1.compute.internal (10.10.252.27)
-    Host is up, received arp-response (0.0020s latency).
-    Not shown: 994 closed ports
-    Reason: 994 resets
-    PORT    STATE SERVICE REASON
-    22/tcp  open  ssh     syn-ack ttl 64
-    25/tcp  open  smtp    syn-ack ttl 64
-    80/tcp  open  http    syn-ack ttl 64
-    110/tcp open  pop3    syn-ack ttl 64
-    111/tcp open  rpcbind syn-ack ttl 64
-    143/tcp open  imap    syn-ack ttl 64
-    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-    Nmap done: 1 IP address (1 host up) scanned in 1.59 seconds
-
-__________________________________________________________________________________________
-
-
-Appendix:

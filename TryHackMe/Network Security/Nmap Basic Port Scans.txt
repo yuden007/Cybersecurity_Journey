@@ -17,26 +17,26 @@ TASK 4: Connect Scan
 
 If you are not a privileged user (root or sudoer), a TCP connect scan is the only possible option to discover open TCP ports.
 By default, Nmap will attempt to connect to the 1000 most common ports.
-
-To illustrate the -sT (TCP connect scan):
            
-    pentester@TryHackMe$ nmap -sT 10.48.132.110
-
-    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
-    Nmap scan report for 10.48.132.110
-    Host is up (0.0024s latency).
-    Not shown: 995 closed ports
-    PORT    STATE SERVICE
-    22/tcp  open  ssh
-    25/tcp  open  smtp
-    80/tcp  open  http
-    111/tcp open  rpcbind
-    143/tcp open  imap
-    993/tcp open  imaps
-    995/tcp open  pop3s
-    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-    Nmap done: 1 IP address (1 host up) scanned in 0.40 seconds
+    /*************************************************************************************
+    * pentester@TryHackMe$ nmap -sT 10.48.132.110
+    *
+    * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
+    * Nmap scan report for 10.48.132.110
+    * Host is up (0.0024s latency).
+    * Not shown: 995 closed ports
+    * PORT    STATE SERVICE
+    * 22/tcp  open  ssh
+    * 25/tcp  open  smtp
+    * 80/tcp  open  http
+    * 111/tcp open  rpcbind
+    * 143/tcp open  imap
+    * 993/tcp open  imaps
+    * 995/tcp open  pop3s
+    * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+    *
+    * Nmap done: 1 IP address (1 host up) scanned in 0.40 seconds
+    *************************************************************************************
 
 Note that we can use -F to enable fast mode and decrease the number of scanned ports from 1000 to 100 most common ports.
 Use the -r option to scan ports in consecutive order instead of random. 
@@ -51,22 +51,24 @@ Unprivileged users can only perform connect scans, while SYN scans (default) req
 SYN scans avoid completing the TCP 3-way handshake, reducing the chance of detection. 
 Use the -sS option to perform a SYN scan.
   
-    pentester@TryHackMe$ sudo nmap -sS 10.48.142.27
-
-    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
-    Nmap scan report for 10.48.142.27
-    Host is up (0.0073s latency).
-    Not shown: 994 closed ports
-    PORT    STATE SERVICE
-    22/tcp  open  ssh
-    25/tcp  open  smtp
-    80/tcp  open  http
-    110/tcp open  pop3
-    111/tcp open  rpcbind
-    143/tcp open  imap
-    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-    Nmap done: 1 IP address (1 host up) scanned in 1.60 seconds
+    /*************************************************************************************
+    * pentester@TryHackMe$ sudo nmap -sS 10.48.142.27
+    *
+    * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:53 BST
+    * Nmap scan report for 10.48.142.27
+    * Host is up (0.0073s latency).
+    * Not shown: 994 closed ports
+    * PORT    STATE SERVICE
+    * 22/tcp  open  ssh
+    * 25/tcp  open  smtp
+    * 80/tcp  open  http
+    * 110/tcp open  pop3
+    * 111/tcp open  rpcbind
+    * 143/tcp open  imap
+    * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+    *
+    * Nmap done: 1 IP address (1 host up) scanned in 1.60 seconds
+    *************************************************************************************
 
 __________________________________________________________________________________________
 
@@ -76,18 +78,20 @@ TASK 6: UDP Scan
 Sending a UDP packet to an open port won’t tell us anything.
 The UDP ports that don’t generate any unreachable response are the ones that Nmap will state as open.
            
-    pentester@TryHackMe$ sudo nmap -sU 10.49.147.23
-
-    Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:54 BST
-    Nmap scan report for 10.49.147.23
-    Host is up (0.00061s latency).
-    Not shown: 998 closed ports
-    PORT    STATE         SERVICE
-    68/udp  open|filtered dhcpc
-    111/udp open          rpcbind
-    MAC Address: 02:45:BF:8A:2D:6B (Unknown)
-
-    Nmap done: 1 IP address (1 host up) scanned in 1085.05 seconds
+    /*************************************************************************************
+    * pentester@TryHackMe$ sudo nmap -sU 10.49.147.23
+    *
+    * Starting Nmap 7.60 ( https://nmap.org ) at 2021-08-30 09:54 BST
+    * Nmap scan report for 10.49.147.23
+    * Host is up (0.00061s latency).
+    * Not shown: 998 closed ports
+    * PORT    STATE         SERVICE
+    * 68/udp  open|filtered dhcpc
+    * 111/udp open          rpcbind
+    * MAC Address: 02:45:BF:8A:2D:6B (Unknown)
+    *
+    * Nmap done: 1 IP address (1 host up) scanned in 1085.05 seconds
+    *************************************************************************************
 
 __________________________________________________________________________________________
 

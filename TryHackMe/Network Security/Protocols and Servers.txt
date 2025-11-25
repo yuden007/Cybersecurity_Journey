@@ -1,0 +1,288 @@
+__________________________________________________________________________________________
+
+
+TASK 2: Telnet
+
+Telnet is an application layer protocol for connecting to a virtual terminal on another computer. 
+It uses port 23, but communication is unencrypted.
+
+__________________________________________________________________________________________
+
+
+TASK 3: Hypertext Transfer Protocol (HTTP) 
+
+HTTP transmits data in cleartext, allowing tools like Telnet or Netcat to interact with web servers as browsers.
+Popular HTTP servers include Apache, IIS, and nginx.
+           
+    /************************************************************************************
+    * pentester@TryHackMe$ telnet 10.48.144.215 80
+    * Trying 10.48.144.215...
+    * Connected to 10.48.144.215.
+    * Escape character is '^]'.
+    * GET /index.html HTTP/1.1
+    * host: telnet
+    * 
+    * HTTP/1.1 200 OK
+    * Server: nginx/1.18.0 (Ubuntu)
+    * Date: Wed, 15 Sep 2021 08:56:20 GMT
+    * Content-Type: text/html
+    * Content-Length: 234
+    * Last-Modified: Wed, 15 Sep 2021 08:53:59 GMT
+    * Connection: keep-alive
+    * ETag: "6141b4a7-ea"
+    * Accept-Ranges: bytes
+    * 
+    * <!DOCTYPE html>
+    * <html lang="en">
+    * <head>
+    *     <title>Welcome to my Web Server</title>
+    *     <meta charset="UTF-8" />
+    *     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    * </head>
+    * <body>
+    *     <h1>Coming Soon<h1>
+    * </body>
+    * </html>
+    ************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK 4: File Transfer Protocol (FTP) 
+
+FTP enables file transfers between systems efficiently but transmits data in cleartext. 
+It uses port 21 by default, and tools like Telnet or Netcat can interact with FTP servers.
+
+STAT provides additional info, while SYST shows the target's System Type (e.g., UNIX). 
+PASV switches to passive mode. 
+
+FTP modes:
+    Active: Data sent from server's port 20.
+    Passive: Data sent from client's port >1023.
+
+TYPE A sets ASCII mode; TYPE I sets binary mode. 
+File transfer isn't possible with simple clients like Telnet due to FTP's separate data connection.
+
+           
+    /************************************************************************************
+    * pentester@TryHackMe$ telnet 10.48.144.215 21
+    * Trying 10.48.144.215...
+    * Connected to 10.48.144.215.
+    * Escape character is '^]'.
+    * 220 (vsFTPd 3.0.3)
+    * USER frank
+    * 331 Please specify the password.
+    * PASS D2xc9CgD
+    * 230 Login successful.
+    * SYST
+    * 215 UNIX Type: L8
+    * PASV
+    * 227 Entering Passive Mode (10,10,0,148,78,223).
+    * TYPE A
+    * 200 Switching to ASCII mode.
+    * STAT          
+    * 211-FTP server status:
+    *      Connected to ::ffff:10.10.0.1
+    *      Logged in as frank
+    *      TYPE: ASCII
+    *      No session bandwidth limit
+    *      Session timeout in seconds is 300
+    *      Control connection is plain text
+    *      Data connections will be plain text
+    *      At session startup, client count was 1
+    *      vsFTPd 3.0.3 - secure, fast, stable
+    * 211 End of status
+    * QUIT
+    * 221 Goodbye.
+    * Connection closed by foreign host.
+    ************************************************************************************/
+
+To download a text file via FTP, log in and use the ftp> prompt. 
+Run `ls` to list files, switch to `ascii` for text files, and use `get FILENAME` to transfer the file.
+
+    /************************************************************************************
+    * pentester@TryHackMe$ ftp 10.48.144.215
+    * Connected to 10.48.144.215.
+    * 220 (vsFTPd 3.0.3)
+    * Name: frank
+    * 331 Please specify the password.
+    * Password: D2xc9CgD
+    * 230 Login successful.
+    * Remote system type is UNIX.
+    * Using binary mode to transfer files.
+    * ftp> ls
+    * 227 Entering Passive Mode (10,20,30,148,201,180).
+    * 150 Here comes the directory listing.
+    * -rw-rw-r--    1 1001     1001         4006 Sep 15 10:27 README.txt
+    * 226 Directory send OK.
+    * ftp> ascii
+    * 200 Switching to ASCII mode.
+    * ftp> get README.txt
+    * local: README.txt remote: README.txt
+    * 227 Entering Passive Mode (10,10,0,148,125,55).
+    * 150 Opening BINARY mode data connection for README.txt (4006 bytes).
+    * WARNING! 9 bare linefeeds received in ASCII mode
+    * File may not have transferred correctly.
+    * 226 Transfer complete.
+    * 4006 bytes received in 0.000269 secs (14892.19 Kbytes/sec)
+    * ftp> exit
+    * 221 Goodbye.
+    ************************************************************************************/
+
+FTP servers use software like vsftpd, ProFTPD, or uFTP. 
+Clients include console tools (Linux FTP) or GUI apps like FileZilla. 
+Some browsers also support FTP. 
+Since FTP transmits credentials and data in cleartext, it is vulnerable to interception.
+
+__________________________________________________________________________________________
+
+
+TASK 5: Simple Mail Transger Protocol (SMTP)
+
+SMTP operates in cleartext, allowing Telnet to simulate an email client (MUA) for sending messages. 
+SMTP servers typically listen on port 25.
+
+    Mail Submission Agent (MSA)
+    Mail Transfer Agent (MTA)
+    Mail Delivery Agent (MDA)
+    Mail User Agent (MUA)
+
+    1. An MUA, or simply an email client, has an email message to be sent. The MUA connects to an MSA to send its message.
+    2. The MSA receives the message, checks for any errors before transferring it to the MTA server, commonly hosted on the same server.
+    3. The MTA will send the email message to the MTA of the recipient. The MTA can also function as an MSA.
+    4. A typical setup would have the MTA server also functioning as an MDA.
+    5. The recipient will collect its email from the MDA using their email client.
+
+To communicate with an MTA or MDA, we use email protocols like:
+    - Simple Mail Transfer Protocol (SMTP)
+    - Post Office Protocol (POP3) or Internet Message Access Protocol (IMAP)
+           
+    /************************************************************************************
+    * pentester@TryHackMe$ telnet 10.48.144.215 25
+    * Trying 10.48.144.215...
+    * Connected to 10.48.144.215.
+    * Escape character is '^]'.
+    * 220 bento.localdomain ESMTP Postfix (Ubuntu)
+    * helo telnet
+    * 250 bento.localdomain
+    * mail from: 
+    * 250 2.1.0 Ok
+    * rcpt to: 
+    * 250 2.1.5 Ok
+    * data
+    * 354 End data with .
+    * subject: Sending email with Telnet
+    * Hello Frank,
+    * I am just writing to say hi!             
+    * .
+    * 250 2.0.0 Ok: queued as C3E7F45F06
+    * quit
+    * 221 2.0.0 Bye
+    * Connection closed by foreign host.
+    ************************************************************************************/
+
+After `helo`, use `mail from:` and `rcpt to:` for sender and recipient. 
+Use `data` to start the message, ending it with `<CR><LF>.<CR><LF>` (or Enter, then `.` on a new line, then Enter). 
+
+__________________________________________________________________________________________
+
+
+TASK 6: Post Office Protocol 3 (POP3)
+
+POP3 is a protocol for downloading emails from an MDA server. 
+The client connects, authenticates, retrieves messages, and optionally deletes them.
+
+The example below demonstrates a POP3 session via Telnet. 
+The user connects to the server on port 110, authenticates with USER frank and PASS D2xc9CgD, and retrieves inbox stats using STAT (+OK 1 179). 
+LIST shows new messages, and RETR 1 fetches the first message. 
+These commands help understand the protocol but don't need to be memorized.
+   
+    /************************************************************************************
+    * pentester@TryHackMe$ telnet 10.48.144.215 110
+    * Trying 10.48.144.215...
+    * Connected to 10.48.144.215.
+    * Escape character is '^]'.
+    * +OK 10.48.144.215 Mail Server POP3 Wed, 15 Sep 2021 11:05:34 +0300 
+    * USER frank
+    * +OK frank
+    * PASS D2xc9CgD
+    * +OK 1 messages (179) octets
+    * STAT
+    * +OK 1 179
+    * LIST
+    * +OK 1 messages (179) octets
+    * 1 179
+    * .
+    * RETR 1
+    * +OK
+    * From: Mail Server 
+    * To: Frank 
+    * subject: Sending email with Telnet
+    * Hello Frank,
+    * I am just writing to say hi!
+    * .
+    * QUIT
+    * +OK 10.48.144.215 closing connection
+    * Connection closed by foreign host.
+    ************************************************************************************/
+
+The example shows that commands are sent in cleartext. 
+Using Telnet authenticated and retrieved an email message, exposing credentials to interception.
+
+Typically, the mail client (MUA) connects to the POP3 server (MDA), authenticates, and downloads messages. 
+While the interface hides the process, similar commands are issued as in the Telnet session.
+
+By default, the mail client deletes messages after download. 
+The default behavior can be changed in settings to allow downloads from multiple clients. 
+However, using POP3 across multiple clients can lead to losing track of read/unread messages. 
+For synchronization, consider IMAP.
+
+__________________________________________________________________________________________
+
+
+TASK 7: Internet Message Access Protocol (IMAP) 
+
+IMAP synchronizes emails across devices, unlike POP3. The default port is 143.
+Changes like marking an email as read are saved on the IMAP server and reflected on all devices.
+
+Below is an example using Telnet to connect to an IMAP server. 
+Commands are prefixed with a tag (e.g., c1, c2) to track replies. 
+After authenticating with `LOGIN username password`, we list mail folders using `LIST "" "*"`, and check for new messages with `EXAMINE INBOX`. 
+These commands illustrate client-server communication but don't need to be memorized.
+           
+    /************************************************************************************
+    * pentester@TryHackMe$ telnet 10.48.144.215 143
+    * Trying 10.48.144.215...
+    * Connected to 10.48.144.215.
+    * Escape character is '^]'.
+    * * OK [CAPABILITY IMAP4rev1 UIDPLUS CHILDREN NAMESPACE THREAD=ORDEREDSUBJECT THREAD=REFERENCES SORT QUOTA IDLE ACL ACL2=UNION STARTTLS ENABLE UTF8=ACCEPT] Courier-IMAP ready. Copyright 1998-2018 Double Precision, Inc.  See COPYING for distribution information.
+    * c1 LOGIN frank D2xc9CgD
+    * * OK [ALERT] Filesystem notification initialization error -- contact your mail administrator (check for configuration errors with the FAM/Gamin library)
+    * c1 OK LOGIN Ok.
+    * c2 LIST "" "*"
+    * * LIST (\HasNoChildren) "." "INBOX.Trash"
+    * * LIST (\HasNoChildren) "." "INBOX.Drafts"
+    * * LIST (\HasNoChildren) "." "INBOX.Templates"
+    * * LIST (\HasNoChildren) "." "INBOX.Sent"
+    * * LIST (\Unmarked \HasChildren) "." "INBOX"
+    * c2 OK LIST completed
+    * c3 EXAMINE INBOX
+    * * FLAGS (\Draft \Answered \Flagged \Deleted \Seen \Recent)
+    * * OK [PERMANENTFLAGS ()] No permanent flags permitted
+    * * 0 EXISTS
+    * * 0 RECENT
+    * * OK [UIDVALIDITY 631694851] Ok
+    * * OK [MYRIGHTS "acdilrsw"] ACL
+    * c3 OK [READ-ONLY] Ok
+    * c4 LOGOUT
+    * * BYE Courier-IMAP server shutting down
+    * c4 OK LOGOUT completed
+    * Connection closed by foreign host.
+    ************************************************************************************/
+
+It is clear that IMAP sends the login credentials in cleartext.
+
+__________________________________________________________________________________________
+
+
+Appendix:
