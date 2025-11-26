@@ -454,3 +454,18 @@ A HTML element (<link rel="canonical">) placed in <head> section of webpage.
 It's used to tell search engines which version of a webpage is the “preferred” or authoritative one when multiple URLs contain similar or duplicate content.
 
 csrf token: Ensure the request originates from the same location as the form was generated.
+
+There are three major types of XSS attacks:
+
+1. **DOM-based XSS (Document Object Model-based Cross-site Scripting)**:
+    - Uses the HTML environment to execute malicious JavaScript.
+    - Commonly exploits the `<script></script>` HTML tag.
+
+2. **Persistent XSS (Server-side)**:
+    - JavaScript is executed when the server loads the page containing it.
+    - Occurs when the server does not sanitize user data before storing it.
+    - Commonly found on blog posts or comment sections.
+
+3. **Reflected XSS (Client-side)**:
+    - JavaScript is executed on the client-side of the web application.
+    - Typically occurs when the server does not sanitize search or input data.
