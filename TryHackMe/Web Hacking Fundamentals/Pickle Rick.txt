@@ -1,0 +1,294 @@
+__________________________________________________________________________________________
+
+
+TASK: Scan port
+
+    /*************************************************************************************
+    * Starting Nmap 7.95 ( https://nmap.org ) at 2025-11-27 16:03 HKT
+    * Nmap scan report for 10.49.188.177
+    * Host is up (0.10s latency).
+    * Not shown: 998 closed tcp ports (reset)
+    * PORT   STATE SERVICE
+    * 22/tcp open  ssh
+    * 80/tcp open  http
+    *
+    * Nmap done: 1 IP address (1 host up) scanned in 39.41 seconds
+    *************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK: Look for sub-domain
+
+Nikto scans web servers for vulnerabilities like outdated software and dangerous files.
+
+Usage:
+    nikto -h <TARGET>
+    Example: nikto -h http://example.com
+
+Options:
+    -p <PORT>: Specify port (default: 80).
+    -ssl: Force HTTPS scanning.
+    -Tuning <OPTIONS>: Select tests (e.g., 1: Files, 2: Misconfig, 9: All).
+    -o <FILE>: Save results (e.g., -o results.txt).
+    -Format <FORMAT>: Output format (txt, html, csv, xml).
+    -timeout <SECONDS>: Set request timeout.
+    -update: Update vulnerability database.
+
+    /*************************************************************************************
+    * root@ip-10-49-101-35:~# nikto -h http://10.49.188.177
+    * - Nikto v2.1.5
+    * ---------------------------------------------------------------------------
+    * + Target IP:          10.49.188.177
+    * + Target Hostname:    10.49.188.177
+    * + Target Port:        80
+    * + Start Time:         2025-11-27 08:35:46 (GMT0)
+    * ---------------------------------------------------------------------------
+    * + Server: Apache/2.4.41 (Ubuntu)
+    * + Server leaks inodes via ETags, header found with file /, fields: 0x426 0x5818ccf125686 
+    * + The anti-clickjacking X-Frame-Options header is not present.
+    * + No CGI Directories found (use '-C all' to force check all possible dirs)
+    * + "robots.txt" retrieved but it does not contain any 'disallow' entries (which is odd).
+    * + Allowed HTTP Methods: GET, POST, OPTIONS, HEAD 
+    * + Cookie PHPSESSID created without the httponly flag
+    * + /login.php: Admin login page/section found.
+    * + 6544 items checked: 0 error(s) and 6 item(s) reported on remote host
+    * + End Time:           2025-11-27 08:35:55 (GMT0) (9 seconds)
+    * ---------------------------------------------------------------------------
+    * + 1 host(s) tested
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# nikto -h http://10.49.188.177/assets
+    * - Nikto v2.1.5
+    * ---------------------------------------------------------------------------
+    * + Target IP:          10.49.188.177
+    * + Target Hostname:    10.49.188.177
+    * + Target Port:        80
+    * + Start Time:         2025-11-27 08:36:07 (GMT0)
+    * ---------------------------------------------------------------------------
+    * + Server: Apache/2.4.41 (Ubuntu)
+    * + The anti-clickjacking X-Frame-Options header is not present.
+    * + OSVDB-3268: /assets/: Directory indexing found.
+    * + No CGI Directories found (use '-C all' to force check all possible dirs)
+    * + Allowed HTTP Methods: GET, POST, OPTIONS, HEAD 
+    * + OSVDB-3268: /assets/./: Directory indexing found.
+    * + OSVDB-3268: /assets/?mod=node&nid=some_thing&op=view: Directory indexing found.
+    * + OSVDB-3268: /assets/?mod=some_thing&op=browse: Directory indexing found.
+    * + /assets/./: Appending '/./' to a directory allows indexing
+    * + OSVDB-3268: /assets//: Directory indexing found.
+    * + /assets//: Apache on Red Hat Linux release 9 reveals the root directory listing by default if there is no index page.
+    * + OSVDB-3268: /assets/?Open: Directory indexing found.
+    * + OSVDB-3268: /assets/?OpenServer: Directory indexing found.
+    * + OSVDB-3268: /assets/%2e/: Directory indexing found.
+    * + OSVDB-576: /assets/%2e/: Weblogic allows source code or directory listing, upgrade to v6.0 SP1 or higher. http://www.securityfocus.com/bid/2513.
+    * + OSVDB-3268: /assets/?mod=<script>alert(document.cookie)</script>&op=browse: Directory indexing found.
+    * + OSVDB-3268: /assets/?sql_debug=1: Directory indexing found.
+    * + OSVDB-3268: /assets///: Directory indexing found.
+    * + OSVDB-3268: /assets/?PageServices: Directory indexing found.
+    * + OSVDB-119: /assets/?PageServices: The remote server may allow directory listings through Web Publisher by forcing the server to show all files via 'open directory browsing'. Web Publisher should be disabled. CVE-1999-0269.
+    * + OSVDB-3268: /assets/?wp-cs-dump: Directory indexing found.
+    * + OSVDB-119: /assets/?wp-cs-dump: The remote server may allow directory listings through Web Publisher by forcing the server to show all files via 'open directory browsing'. Web Publisher should be disabled. CVE-1999-0269.
+    * + OSVDB-3268: /assets///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: Directory indexing found.
+    * + OSVDB-3288: /assets///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////: Abyss 1.03 reveals directory listing when 	 /'s are requested.
+    * + OSVDB-3268: /assets/?pattern=/etc/*&sort=name: Directory indexing found.
+    * + OSVDB-3268: /assets/?D=A: Directory indexing found.
+    * + OSVDB-3268: /assets/?N=D: Directory indexing found.
+    * + OSVDB-3268: /assets/?S=A: Directory indexing found.
+    * + OSVDB-3268: /assets/?M=A: Directory indexing found.
+    * + OSVDB-3268: /assets/?\"><script>alert('Vulnerable');</script>: Directory indexing found.
+    * + OSVDB-3268: /assets/?_CONFIG[files][functions_page]=http://cirt.net/rfiinc.txt?: Directory indexing found.
+    * + OSVDB-3268: /assets/?npage=-1&content_dir=http://cirt.net/rfiinc.txt?%00&cmd=ls: Directory indexing found.
+    * + OSVDB-3268: /assets/?npage=1&content_dir=http://cirt.net/rfiinc.txt?%00&cmd=ls: Directory indexing found.
+    * + OSVDB-3268: /assets/?show=http://cirt.net/rfiinc.txt??: Directory indexing found.
+    * + OSVDB-3268: /assets/?-s: Directory indexing found.
+    * + 6544 items checked: 0 error(s) and 33 item(s) reported on remote host
+    * + End Time:           2025-11-27 08:36:15 (GMT0) (8 seconds)
+    * ---------------------------------------------------------------------------
+    * + 1 host(s) tested
+    *************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK: Look for sub-domain
+
+ffuf (Fuzz Faster U Fool) is a web fuzzer for discovering hidden files, directories, and parameters on web servers.
+
+Basic Usage:
+    ffuf -u <URL> -w <WORDLIST>
+    Example: ffuf -u http://example.com/FUZZ -w /path/to/wordlist.txt
+
+Options:
+    -u <URL>: Target URL with FUZZ as the placeholder.
+    -w <WORDLIST>: Wordlist for fuzzing.
+    -mc <STATUS_CODES>: Match specific HTTP status codes (e.g., -mc 200,301).
+    -o <OUTPUT_FILE>: Save results to a file.
+    -recursion: Enable recursive fuzzing.
+    -t <THREADS>: Set concurrent threads (e.g., -t 50).
+
+    /*************************************************************************************
+    * root@ip-10-49-101-35:~# ffuf -u http://10.49.188.177/FUZZ -w /usr/share/wordlists/dirb/common.txt 
+    *
+    *         /'___\  /'___\           /'___\       
+    *        /\ \__/ /\ \__/  __  __  /\ \__/       
+    *        \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+    *         \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+    *          \ \_\   \ \_\  \ \____/  \ \_\       
+    *           \/_/    \/_/   \/___/    \/_/       
+    *
+    *        v1.3.1
+    * ________________________________________________
+    *
+    *  :: Method           : GET
+    *  :: URL              : http://10.49.188.177/FUZZ
+    *  :: Wordlist         : FUZZ: /usr/share/wordlists/dirb/common.txt
+    *  :: Follow redirects : false
+    *  :: Calibration      : false
+    *  :: Timeout          : 10
+    *  :: Threads          : 40
+    *  :: Matcher          : Response status: 200,204,301,302,307,401,403,405
+    * ________________________________________________
+    *
+    * .hta                    [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * .htaccess               [Status: 403, Size: 278, Words: 20, Lines: 10]
+    *                         [Status: 200, Size: 1062, Words: 148, Lines: 38]
+    * assets                  [Status: 301, Size: 315, Words: 20, Lines: 10]
+    * .htpasswd               [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * index.html              [Status: 200, Size: 1062, Words: 148, Lines: 38]
+    * robots.txt              [Status: 200, Size: 17, Words: 1, Lines: 2]
+    * server-status           [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * :: Progress: [4614/4614] :: Job [1/1] :: 53 req/sec :: Duration: [0:00:05] :: Errors: 0 ::
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# ffuf -u http://10.49.188.177/assets/FUZZ -w /usr/share/wordlists/dirb/common.txt 
+    *
+    *         /'___\  /'___\           /'___\       
+    *        /\ \__/ /\ \__/  __  __  /\ \__/       
+    *        \ \ ,__\\ \ ,__\/\ \/\ \ \ \ ,__\      
+    *         \ \ \_/ \ \ \_/\ \ \_\ \ \ \ \_/      
+    *          \ \_\   \ \_\  \ \____/  \ \_\       
+    *           \/_/    \/_/   \/___/    \/_/       
+    *
+    *        v1.3.1
+    * ________________________________________________
+    *
+    *  :: Method           : GET
+    *  :: URL              : http://10.49.188.177/assets/FUZZ
+    *  :: Wordlist         : FUZZ: /usr/share/wordlists/dirb/common.txt
+    *  :: Follow redirects : false
+    *  :: Calibration      : false
+    *  :: Timeout          : 10
+    *  :: Threads          : 40
+    *  :: Matcher          : Response status: 200,204,301,302,307,401,403,405
+    * ________________________________________________
+    *
+    *                         [Status: 200, Size: 2192, Words: 125, Lines: 23]
+    * .htpasswd               [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * .htaccess               [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * .hta                    [Status: 403, Size: 278, Words: 20, Lines: 10]
+    * :: Progress: [4614/4614] :: Job [1/1] :: 73 req/sec :: Duration: [0:00:04] :: Errors: 0 ::
+    *************************************************************************************/
+
+
+__________________________________________________________________________________________
+
+
+TASK: Look for sub-domain
+
+Gobuster is a directory and file brute-forcing tool commonly used for web application testing.
+
+Basic Usage:
+    gobuster dir -u <URL> -w <WORDLIST>
+    Example: gobuster dir -u http://example.com -w /path/to/wordlist.txt
+
+Options:
+    -u <URL>: Target URL.
+    -w <WORDLIST>: Wordlist for brute-forcing.
+    -x <EXTENSIONS>: File extensions to search for (e.g., -x php,html,txt).
+    -o <OUTPUT_FILE>: Save results to a file.
+    -t <THREADS>: Number of concurrent threads (default: 10).
+    -s <STATUS_CODES>: Filter results by HTTP status codes (e.g., -s 200,204,301).
+    -r: Follow redirects.
+    -k: Skip SSL certificate verification.
+
+Example:
+    gobuster dir -u http://10.49.188.177 -w /usr/share/wordlists/dirb/common.txt -o gobuster_results.txt -t 20
+
+    /*************************************************************************************
+    * root@ip-10-49-101-35:~# gobuster dir -u http://10.49.188.177 -w /usr/share/wordlists/dirb/common.txt 
+    * ===============================================================
+    * Gobuster v3.6
+    * by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+    * ===============================================================
+    * [+] Url:                     http://10.49.188.177
+    * [+] Method:                  GET
+    * [+] Threads:                 10
+    * [+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+    * [+] Negative Status codes:   404
+    * [+] User Agent:              gobuster/3.6
+    * [+] Timeout:                 10s
+    * ===============================================================
+    * Starting gobuster in directory enumeration mode
+    * ===============================================================
+    * /htaccess            (Status: 403) [Size: 278]
+    * /htpasswd            (Status: 403) [Size: 278]
+    * /assets               (Status: 301) [Size: 315] [--> http://10.49.188.177/assets/]
+    * /index.html           (Status: 200) [Size: 1062]
+    * /robots.txt           (Status: 200) [Size: 17]
+    * /server-status        (Status: 403) [Size: 278]
+    * Progress: 4614 / 4615 (99.98%)
+    * ===============================================================
+    * Finished
+    * ===============================================================
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# 
+    * root@ip-10-49-101-35:~# gobuster dir -u http://10.49.188.177/assets -w /usr/share/wordlists/dirb/common.txt 
+    * ===============================================================
+    * Gobuster v3.6
+    * by OJ Reeves (@TheColonial) & Christian Mehlmauer (@firefart)
+    * ===============================================================
+    * [+] Url:                     http://10.49.188.177/assets
+    * [+] Method:                  GET
+    * [+] Threads:                 10
+    * [+] Wordlist:                /usr/share/wordlists/dirb/common.txt
+    * [+] Negative Status codes:   404
+    * [+] User Agent:              gobuster/3.6
+    * [+] Timeout:                 10s
+    * ===============================================================
+    * Starting gobuster in directory enumeration mode
+    * ===============================================================
+    * /hta                 (Status: 403) [Size: 278]
+    * /htpasswd            (Status: 403) [Size: 278]
+    * /htaccess            (Status: 403) [Size: 278]
+    * Progress: 4614 / 4615 (99.98%)
+    * ===============================================================
+    * Finished
+    * ===============================================================
+    *************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK: 
+
+Go to login.php
+Login with password from index html comment and password from robots.txt
+Run 'ls', found 1st ingredient. Cannot use 'cat' but can use 'tac'.
+'tac' clue.txt, tell us to dig the file system.
+Found /home/rick directory, 'tac /home/rick/second\ ingredients', found 2nd ingredient.
+Run 'sudo -l' and found that www-data users can run sudo without password.
+Found 3rd ingredient in root directory, 'sudo tac' to view it.
+
+__________________________________________________________________________________________
+
+
+Appendix:

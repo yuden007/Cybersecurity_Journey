@@ -1,0 +1,42 @@
+__________________________________________________________________________________________
+
+
+TASK 2: AS02: Security Misconfigurations
+
+Given /api/process, try to access /api/process/admin, show flag.
+
+__________________________________________________________________________________________
+
+
+TASK 3: AS03: Software Supply Chain Failures 
+
+Given the app.py, we notice that we can POST with json:
+    {
+        "data": "debug",
+        "debug": "true"
+    }
+Response shows flag.
+
+__________________________________________________________________________________________
+
+
+TASK 4:  AS04: Cryptography Failures
+
+When visiting the page, a decrypt.js file came along.
+It shows the decryption info, use CyberChef to decrupt then get the flag.
+
+__________________________________________________________________________________________
+
+
+TASK 5: AS06: Insecure Design 
+
+Given aAI chatbot mobile app download link, use ffuf to find further path.
+ffuf -u http://10.201.2.122:5005/FUZZ -w /usr/share/wordlists/dirb/common.txt
+ffuf -u http://10.201.2.122:5005/api/FUZZ -w /usr/share/wordlists/dirb/common.txt
+
+Then we got http://10.201.2.122:5005/api/messages/user1
+
+__________________________________________________________________________________________
+
+
+Appendix:
