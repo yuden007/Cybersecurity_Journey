@@ -110,6 +110,9 @@ TASK 5: Signature Validation Mistakes
         * payload = jwt.decode(token, self.secret, algorithms="HS256")
         *************************************************************************************/
 
+    Exercise:
+        Decode the jwt, change username to "admin" and admin to 1, encode then remove the signature (leave the full-stop)
+
 
 2. Downgrading to None
 
@@ -130,6 +133,9 @@ TASK 5: Signature Validation Mistakes
         /*************************************************************************************
         * payload = jwt.decode(token, self.secret, algorithms=["HS256", "HS384", "HS512"])
         *************************************************************************************/
+    
+    Exercise:
+        Decode the jwt, change username to "admin" and admin to 1 and alg tp "None", encode
 
 
 3. Weak Symmetric Secrets
@@ -148,6 +154,11 @@ TASK 5: Signature Validation Mistakes
 
     Fix:
         Use a long, random, and secure secret.
+    
+    Exercise:
+        Download jwt common secret words
+            wget https://raw.githubusercontent.com/wallarm/jwt-secrets/master/jwt.secrets.list
+        hashcat -m 16500 -a 0 thm_jwt.txt jwt.secrets.list
 
 
 4. Signature Algorithm Confusion
@@ -188,6 +199,10 @@ TASK 5: Signature Validation Mistakes
         * username = payload['username']
         * flag = self.db_lookup(username, "flag")
         *************************************************************************************/
+
+    Exercise:
+        Put algorithms.py at /usr/lib/python3/dist-packages/jwt/algorithms.py
+        Run the practical code from "Practical Example"
 
 __________________________________________________________________________________________
 
