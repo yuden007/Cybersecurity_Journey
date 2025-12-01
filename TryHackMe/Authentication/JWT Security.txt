@@ -207,41 +207,70 @@ TASK 5: Signature Validation Mistakes
 __________________________________________________________________________________________
 
 
-TASK: 
+TASK 6: JWT Lifetime
 
+Token Lifetime
 
+    Verify the token's lifetime by checking the exp claim to ensure it hasn't expired before validating the signature.
+    If the exp value is too large or missing, tokens may remain valid indefinitely. 
+    Unlike cookies, JWTs lack built-in server-side expiration. 
+    To revoke tokens early, a blocklist is needed, which undermines decentralization. 
+    Choose an appropriate exp value based on the application's needs.
+    Another approach is using refresh tokens. Research their use when testing APIs with JWTs.
 
+    Development Mistake:
+        As mentioned above, the JWT does not have an exp value, meaning it will be persistent. 
+        In the event that an exp claim isn't present, most JWT libraries would accept the token as valid if the signature is verified.
 
-__________________________________________________________________________________________
-
-
-TASK: 
-
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK: 
-
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK: 
-
-
-
-
+    Fix:
+        An exp value should be added to the claims. Once added, most libraries will include reviewing the expiry time of the JWT into their checks for validity. 
+        This can be done as shown in the example below:
+            /*************************************************************************************
+            * lifetime = datetime.datetime.now() + datetime.timedelta(minutes=5)
+            *
+            * payload = {
+            *     'username' : username,
+            *     'admin' : 0,
+            *     'exp' : lifetime
+            * }
+            *
+            * access_token = jwt.encode(payload, self.secret, algorithm="HS256")
+            *************************************************************************************/
 
 __________________________________________________________________________________________
 
 
+TASK 7: Cross-Service Relay attackers
+
+JWTs are often used with a centralized authentication system serving multiple applications. 
+To restrict access to specific applications, the audience claim can be used. 
+However, if not properly enforced, a Cross-Service Relay attack may occur, leading to privilege escalation.
+
+The Audience Claim
+
+    JWTs can include an audience claim to specify the intended application when a centralized authentication system serves multiple applications. 
+    However, enforcement of this claim must occur on the application itself. 
+    If not verified, the JWT may still be considered valid through signature verification, leading to potential misuse.
+
+    A Cross-Service Relay attack occurs when a user with elevated privileges (e.g., "admin" : true) on one application can use the same JWT to gain unauthorized privileges on another application served by the same authentication system. 
+    This happens if the audience claim is not properly verified on the second application, leading to privilege escalation.
+
+    Practical Example
+        Authenticate to example7 using the following data segment: '{ "username" : "user", "password" : "password7", "application" : "appA"}'. You will notice that an audience claim is added, but that you are not an admin.
+        Use this token in both the admin and user requests you make to example7_appA and example7_appB. You will notice that while appA accepts the token, you are not an admin, and appB does not accept the token as the audience is incorrect.
+        Authenticate to example7 using the following data segment: '{ "username" : "user", "password" : "password7", "application" : "appB"}'. You will notice that an audience claim is added again and you are an admin this time.
+        In conclusion, we are able to be authenticated as admin in appA while using appB's admin token.
+
+    Development Mistake
+        The key issue is that the audience claim is not being verified on appA. This can be either because audience claim verification has been turned off or the audience scope has been set too wide.
+
+    Fix
+        The audience claim should be verified when the token is decoded. This can be done as shown in the example below:
+            /*************************************************************************************
+            * payload = jwt.decode(token, self.secret, audience=["appA"], algorithms="HS256")
+            *************************************************************************************/
+
+__________________________________________________________________________________________
 
 
 Appendix:

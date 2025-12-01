@@ -1,25 +1,119 @@
 __________________________________________________________________________________________
 
 
-TASK
+TASK 5 OTP Leakage
 
+OTP Leakage
+    Just get the OTP from network  response as it's accidentally sent to the browser.
 
+    Exploitation
+        1. Visit `http://mfa.thm/labs/first` and log in with:  
+           **Username:** `thm@mail.thm`  
+           **Password:** `test123`
+        2. Open Developer Tools (`F12`), go to the **Network** , and click Login.
+        3. On the MFA page, find the XHR request to `/token` in the **Network** .
+        4. Check the **Response**  for the `token` parameter.
+        5. Copy the `token` value, paste it into the OTP form, and click **Verify Account**.
 
+    Remediation
+        Applications should not return the generated 2FA or OTP in the response. 
+        It is recommended to return a generic message like "success".        
 
 __________________________________________________________________________________________
 
 
-TASK 
+TASK 6 Insecure Coding
 
+Logic Flaw or Insecure Coding?
+    When redirect to OTP page, just skip it by going to dashboard page straight ahead.
 
+    Exploitation
+        1. Visit `http://mfa.thm/labs/second/` and log in with:  
+            **Username:** `thm@mail.thm`  
+            **Password:** `test123`
+        2. Analyze the login and 2FA process. After entering credentials, the user is prompted for an OTP.
+        3. Attempt to bypass the OTP by directly accessing the dashboard URL (e.g., `http://mfa.thm/labs/second/dashboard`).
+        4. If session checks or 2FA enforcement are flawed, access to the dashboard may be granted.
 
+    Diving deeper into the code
 
+        Notice that `$_SESSION['authenticated']` is only set after successful 2FA validation.
+        /*************************************************************************************
+        * # Function that verifies the submitted 2FA token
+        * function verify_2fa_code($code) {
+        *     if (!isset($_SESSION['token']))
+        *         return false;
+        *
+        *     return $code === $_SESSION['token'];
+        * }
+        *
+        * # Function called in the /mfa page
+        * if (verify_2fa_code($_POST['code'])) { # If successful, the user will be redirected to the dashboard.
+        *     $_SESSION['authenticated'] = true; # Session that is used to check if the user completed the 2FA
+        *     header('Location: ' . ROOT_DIR . '/dashboard');
+        *     return;
+        * }
+        *************************************************************************************/
+        If `$_SESSION['authenticated']` is set before OTP validation, attackers can bypass 2FA by accessing protected endpoints directly.
+
+        /*************************************************************************************
+        * function authenticate($email, $password){
+        *     $pdo = get_db_connection();
+        *     $stmt = $pdo->prepare("SELECT `password` FROM users WHERE email = :email");
+        *     $stmt->execute(['email' => $email]);
+        *     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        *
+        *     return $user && password_verify($password, $user['password']);
+        * }
+        *
+        * if (authenticate($email, $password)) {
+        *     $_SESSION['authenticated'] = true; # This flag should only be issued after the MFA completion
+        *     $_SESSION['email'] = $_POST['email'];
+        *     header('Location: ' . ROOT_DIR . '/mfa');
+        *     return;
+        * }
+         *************************************************************************************/
+
+        The application's dashboard relies solely on the `$_SESSION['authenticated']` value. 
+        If this is set to true before OTP validation, an attacker with knowledge of the endpoints can bypass the 2FA page.
+
+    Remediation
+        To remediate this vulnerability, the cookie or session that is used in authentication checks should be split into two parts. 
+        The first part is the one that sets the session after successful username and password verification; the sole purpose of this session is to submit a 2FA token. 
+        The second session should only be after the OTP is validated.
 
 __________________________________________________________________________________________
 
 
-TASK 
+TASK 7 Beatin the Auto-Logout Feature
 
+In some applications, failing the 2FA challenge can cause the application to revert the user back to the first part of the authentication process (i.e., the initial login with username and password). 
+This behavior typically occurs due to security mechanisms designed to prevent brute-force attacks on the 2FA part of the application. 
+The application may force the user to reauthenticate to ensure that the person attempting to log in is indeed the legitimate user and not an attacker trying to guess the OTP.
+
+    Common Reasons for This Behavior:
+        Session Invalidation
+            Upon failing the 2FA challenge, the application might invalidate the user's session as a security measure, forcing the user to start the authentication process from scratch.
+
+        Rate-Limiting and Lockout Policies
+            To prevent attackers from repeatedly attempting to bypass 2FA, the application may have rate-limiting or lockout mechanisms in place that trigger after a set number of failed attempts, reverting the user to the initial login step.
+
+        Security-Driven Redirection
+            Some applications are designed to redirect users back to the login page after multiple failed 2FA attempts as an additional security measure, ensuring that the user's credentials are revalidated before allowing another 2FA attempt.
+
+    Automation makes life easier when attacking these kinds of protection because:
+        Speed: 
+            Automation avoids the delay of manual logins after logouts.
+        Consistency: 
+            Automation ensures accuracy in repetitive tasks.
+        Recovering From Logouts: 
+            Automate re-login after logout to continue attempts without manual intervention.
+        Customization: 
+            Writing custom scripts for the attack provides flexibility to test scenarios like varying IPs, user agents, or request timing.
+
+    Exploitation
+        The application hosted at `http://mfa.thm/labs/third` automatically logs out the user if they fail the 2FA challenge. 
+        For demonstration purposes, the application also generates a 4-digit PIN code every time the user logs in to the application.
 
 
 
