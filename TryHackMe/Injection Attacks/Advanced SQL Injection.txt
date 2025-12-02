@@ -1,0 +1,264 @@
+__________________________________________________________________________________________
+
+
+TASK 1 Intro
+
+    Use nmap to see open ports, running services, targt os, etc.
+
+    /*************************************************************************************
+    * thm@machine$ nmap -A -T4 -p 3306,3389,445,139,135 10.82.144.150
+    *
+    * Starting Nmap 7.60 ( https://nmap.org ) at 2024-05-25 12:03 BST
+    * Nmap scan report for 10.82.144.150
+    * Host is up (0.00034s latency).
+    *
+    * PORT     STATE    SERVICE       VERSION
+    * 135/tcp  open     msrpc
+    * 139/tcp  open     netbios-ssn
+    * 445/tcp  open     microsoft-ds
+    * 3306/tcp open     mysql
+    * 3389/tcp open     ms-wbt-server Microsoft Terminal Services
+    * | ssl-cert: Subject: commonName=SQLi
+    * | Not valid before: 2024-05-23T04:08:44
+    * |_Not valid after:  2024-11-22T04:08:44
+    * |_ssl-date: 2024-05-25T11:03:33+00:00; 0s from scanner time.
+    * MAC Address: 02:87:BD:21:12:33 (Unknown)
+    * Warning: OSScan results may be unreliable because we could not find at least 1 open and 1 closed port
+    * Device type: specialized
+    * Running (JUST GUESSING): AVtech embedded (87%)
+    * Aggressive OS guesses: AVtech Room Alert 26W environmental monitor (87%)
+    * No exact OS matches for host (test conditions non-ideal).
+    * Network Distance: 1 hop
+    * Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
+    *
+    * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+    * Nmap done: 1 IP address (1 host up) scanned in 17.67 seconds
+    *************************************************************************************/
+
+
+__________________________________________________________________________________________
+
+
+TASK 2 Quick Recap
+
+In-band SQL Injection
+
+    This is the most common type of SQL injection, where the attacker uses the same channel for injection and data retrieval:
+    - **Error-Based SQL Injection**: Exploits error messages to gather database information.
+    - **Union-Based SQL Injection**: Uses the UNION operator to retrieve data from other tables.
+
+Inferential (Blind) SQL Injection
+
+    This technique does not directly transfer data but infers information by observing application behavior. It includes:
+    - **Boolean-Based Blind SQL Injection** : Infers true/false conditions by analyzing application responses.
+    - **Time-Based Blind SQL Injection**    : Measures response delays to infer true/false conditions.
+
+Out-of-band SQL Injection
+
+    Used when the same channel cannot be used for attack and data retrieval. 
+    It relies on the database server making external requests (e.g., HTTP or DNS) to send results to the attacker.
+
+__________________________________________________________________________________________
+
+
+TASK 3 Second-Order SQL Injection
+
+Second-order SQL injection exploits stored user input that is later used in SQL queries. 
+The attack triggers when the saved data is retrieved and processed, making it harder to detect during initial input validation.
+
+The normal query for updating a book might look like this:
+    UPDATE books SET book_name = '$new_book_name', author = '$new_author' WHERE ssn = '123123';
+
+if the attacker uses the ssn value:
+    12345'; UPDATE books SET book_name = 'Hacked'; --
+
+The code will execute the following statement when the admin or any other user visits the URL http://10.82.144.150/second/update.php
+    UPDATE books SET book_name = 'Testing', author = 'Hacker' WHERE ssn = '12345'; Update books set book_name ="hacked"; --'; INSERT INTO logs (page) VALUES ('update.php');
+
+if the attacker uses the ssn value, table hello will be dropped:
+    67890'; DROP TABLE hello;--
+
+__________________________________________________________________________________________
+
+
+TASK 4 Filter Evasion Techniques
+
+Advanced SQL injection attacks require bypassing filters to exploit vulnerabilities. 
+Modern defenses sanitize or block common patterns, making basic attempts ineffective. 
+Techniques like character encoding, no-quote injection, and handling space restrictions help evade filters and penetrate secure applications.
+
+Character Encoding
+
+    Character encoding converts SQL payloads into encoded forms to bypass filters:
+  
+        URL Encoding: Converts characters to % followed by their ASCII hex value (e.g., ' OR 1=1-- becomes %27%20OR%201%3D1--).
+        Hexadecimal Encoding: Represents strings as hex values (e.g., 'admin' becomes 0x61646d696e).
+        Unicode Encoding: Uses Unicode escape sequences (e.g., 'admin' becomes \u0061\u0064\u006d\u0069\u006e).
+
+By entering below, we receive SQL syntax error, which means we are able to try SQL injection.
+    Intro to PHP' OR 1=1
+
+Let's use the payload directly on the PHP page to avoid unnecessary tweaking/validation from the client. 
+Below contain the standard payload, where the error is same as before.
+    Intro to PHP' OR 1=1
+    http://10.80.140.92/encoding/search_books.php?book_name=Intro%20to%20PHP%27%20OR%201=1
+
+Now, URL encode the payload Intro to PHP' || 1=1 --+ using Cyber Chef 
+    http://10.80.140.92/encoding/search_books.php?book_name=Intro%20to%20PHP%27%20%7C%7C%201=1%20--%20
+
+When URL encoding a payload, spaces are encoded as '%20' or '+'. 
+In SQL injection scenarios, including the '+' can help bypass filters that may strip out spaces, allowing the injection to function correctly.
+Still, it all depends on the backend.
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK5 : Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+TASK5 : Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+
+
+Appendix:
