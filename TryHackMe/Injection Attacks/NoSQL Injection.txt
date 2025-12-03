@@ -1,10 +1,18 @@
 __________________________________________________________________________________________
 
 
-TASK
+TASK 2 What is NoSQL?
 
+Just as relational databases use some variant of SQL, non-relational databases such as MongoDB use NoSQL.
 
+    To filter documents where `last_name` is "Sandler":  
+        ['last_name' => 'Sandler']
 
+    To filter documents where `gender` is male and `last_name` is "Phillips":  
+        ['gender' => 'male', 'last_name' => 'Phillips'] 
+
+    To filter documents where `age` is less than 50:  
+        ['age' => ['$lt' => '50']]
 
 __________________________________________________________________________________________
 
