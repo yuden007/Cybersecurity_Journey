@@ -1,0 +1,450 @@
+__________________________________________________________________________________________
+
+TASK 4 Reflected XSS
+
+PHP
+    Vulnerable code
+        /*************************************************************************************
+        * <?php
+        * $search_query = $_GET['q'];
+        * echo "<p>You searched for: $search_query</p>";
+        * ?>
+        *************************************************************************************/
+    This code is vulnerable because user input is output without sanitization, allowing XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * <?php
+        * $search_query = $_GET['q'];
+        * $escaped_search_query = htmlspecialchars($search_query);
+        * echo "<p>You searched for: $escaped_search_query</p>";
+        * ?>
+        *************************************************************************************/
+    Using htmlspecialchars() escapes special characters, preventing XSS.
+
+JavaScript (Node.js)
+    Vulnerable code
+        /*************************************************************************************
+        * const express = require('express');
+        * const app = express();
+        *
+        * app.get('/search', function(req, res) {
+        *     var searchTerm = req.query.q;
+        *     res.send('You searched for: ' + searchTerm);
+        * });
+        *
+        * app.listen(80);
+        *************************************************************************************/
+    User input is directly rendered, enabling XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * const express = require('express');
+        * const sanitizeHtml = require('sanitize-html');
+        *
+        * const app = express();
+        *
+        * app.get('/search', function(req, res) {
+        *     const searchTerm = req.query.q;
+        *     const sanitizedSearchTerm = sanitizeHtml(searchTerm);
+        *     res.send('You searched for: ' + sanitizedSearchTerm);
+        * });
+        *
+        * app.listen(80);
+        *************************************************************************************/
+    sanitizeHtml() removes unsafe elements, mitigating XSS.
+
+Python (Flask)
+    Vulnerable code
+        /*************************************************************************************
+        * from flask import Flask, request
+        *
+        * app = Flask(__name__)
+        *
+        * @app.route("/search")
+        * def home():
+        *     query = request.args.get("q")
+        *     return f"You searched for: {query}!"
+        *
+        * if __name__ == "__main__":
+        *     app.run(debug=True)
+        *************************************************************************************/
+    User input is not escaped, so XSS is possible.
+
+    Fixed code
+        /*************************************************************************************
+        * from flask import Flask, request
+        * from html import escape
+        *
+        * app = Flask(__name__)
+        *
+        * @app.route("/search")
+        * def home():
+        *     query = request.args.get("q")
+        *     escaped_query = escape(query)
+        *     return f"You searched for: {escaped_query}!"
+        *
+        * if __name__ == "__main__":
+        *     app.run(debug=True)
+        *************************************************************************************/
+    escape() converts unsafe characters, preventing XSS.
+
+ASP.NET
+    Vulnerable code
+        /*************************************************************************************
+        * public void Page_Load(object sender, EventArgs e)
+        * {
+        *     var userInput = Request.QueryString["q"];
+        *     Response.Write("User Input: " + userInput);
+        * }
+        *************************************************************************************/
+    Direct output of user input allows XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * using System.Web;
+        *
+        * public void Page_Load(object sender, EventArgs e)
+        * {
+        *     var userInput = Request.QueryString["q"];
+        *     var encodedInput = HttpUtility.HtmlEncode(userInput);
+        *     Response.Write("User Input: " + encodedInput);
+        * }
+        *************************************************************************************/
+    HtmlEncode() encodes special characters, blocking XSS.
+
+__________________________________________________________________________________________
+
+TASK 5 Vulnerable Web Application 1
+
+
+
+
+
+__________________________________________________________________________________________
+
+TASK 6 Stored XSS
+
+PHP
+    Vulnerable code
+        /*************************************************************************************
+        * // Storing user comment
+        * $comment = $_POST['comment'];
+        * mysqli_query($conn, "INSERT INTO comments (comment) VALUES ('$comment')");
+        *
+        * // Displaying user comment
+        * $result = mysqli_query($conn, "SELECT comment FROM comments");
+        * while ($row = mysqli_fetch_assoc($result)) {
+        *     echo $row['comment'];
+        * }
+        *************************************************************************************/
+    User input is stored and displayed without sanitization, allowing stored XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * // Storing user comment
+        * $comment = mysqli_real_escape_string($conn, $_POST['comment']);
+        * mysqli_query($conn, "INSERT INTO comments (comment) VALUES ('$comment')");
+        *
+        * // Displaying user comment
+        * $result = mysqli_query($conn, "SELECT comment FROM comments");
+        * while ($row = mysqli_fetch_assoc($result)) {
+        *     $sanitizedComment = htmlspecialchars($row['comment']);
+        *     echo $sanitizedComment;
+        * }
+        *************************************************************************************/
+    htmlspecialchars() escapes special characters, preventing XSS.
+
+JavaScript (Node.js)
+    Vulnerable code
+        /*************************************************************************************
+        * app.get('/comments', (req, res) => {
+        *   let html = '<ul>';
+        *   for (const comment of comments) {
+        *     html += `<li>${comment}</li>`;
+        *   }
+        *   html += '</ul>';
+        *   res.send(html);
+        * });
+        *************************************************************************************/
+    Comments are rendered as HTML without sanitization, enabling XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * const sanitizeHtml = require('sanitize-html');
+        *
+        * app.get('/comments', (req, res) => {
+        *   let html = '<ul>';
+        *   for (const comment of comments) {
+        *     const sanitizedComment = sanitizeHtml(comment);
+        *     html += `<li>${sanitizedComment}</li>`;
+        *   }
+        *   html += '</ul>';
+        *   res.send(html);
+        * });
+        *************************************************************************************/
+    sanitizeHtml() removes unsafe HTML, mitigating XSS.
+
+Python (Flask)
+    Vulnerable code
+        /*************************************************************************************
+        * from flask import Flask, request, render_template_string
+        * from flask_sqlalchemy import SQLAlchemy
+        *
+        * app = Flask(__name__)
+        * app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+        * db = SQLAlchemy(app)
+        *
+        * class Comment(db.Model):
+        *     id = db.Column(db.Integer, primary_key=True)
+        *     content = db.Column(db.String, nullable=False)
+        *
+        * @app.route('/comment', methods=['POST'])
+        * def add_comment():
+        *     comment_content = request.form['comment']
+        *     comment = Comment(content=comment_content)
+        *     db.session.add(comment)
+        *     db.session.commit()
+        *     return 'Comment added!'
+        *
+        * @app.route('/comments')
+        * def show_comments():
+        *     comments = Comment.query.all()
+        *     return render_template_string(''.join(['<div>' + c.content + '</div>' for c in comments]))
+        *************************************************************************************/
+    Comments are displayed without escaping, allowing XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * from flask import Flask, request, render_template_string
+        * from flask_sqlalchemy import SQLAlchemy
+        * from markupsafe import escape
+        *
+        * app = Flask(__name__)
+        * app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///site.db'
+        * db = SQLAlchemy(app)
+        *
+        * class Comment(db.Model):
+        *     id = db.Column(db.Integer, primary_key=True)
+        *     content = db.Column(db.String, nullable=False)
+        *
+        * @app.route('/comment', methods=['POST'])
+        * def add_comment():
+        *     comment_content = request.form['comment']
+        *     comment = Comment(content=comment_content)
+        *     db.session.add(comment)
+        *     db.session.commit()
+        *     return 'Comment added!'
+        *
+        * @app.route('/comments')
+        * def show_comments():
+        *     comments = Comment.query.all()
+        *     sanitized_comments = [escape(c.content) for c in comments]
+        *     return render_template_string(''.join(['<div>' + comment + '</div>' for comment in sanitized_comments]))
+        *************************************************************************************/
+    escape() converts unsafe characters, preventing XSS.
+
+ASP.NET
+    Vulnerable code
+        /*************************************************************************************
+        * public void SaveComment(string userComment)
+        * {
+        *     var command = new SqlCommand("INSERT INTO Comments (Comment) VALUES ('" + userComment + "')", connection);
+        *     // Execute the command
+        * }
+        *
+        * public void DisplayComments()
+        * {
+        *     var reader = new SqlCommand("SELECT Comment FROM Comments", connection).ExecuteReader();
+        *     while (reader.Read())
+        *     {
+        *         Response.Write(reader["Comment"].ToString());
+        *     }
+        * }
+        *************************************************************************************/
+    User input is output directly, enabling XSS.
+
+    Fixed code
+        /*************************************************************************************
+        * using System.Web;
+        *
+        * public void SaveComment(string userComment)
+        * {
+        *     var command = new SqlCommand("INSERT INTO Comments (Comment) VALUES (@comment)", connection);
+        *     command.Parameters.AddWithValue("@comment", userComment);
+        * }
+        *
+        * public void DisplayComments()
+        * {
+        *     var reader = new SqlCommand("SELECT Comment FROM Comments", connection).ExecuteReader();
+        *     while (reader.Read())
+        *     {
+        *         var comment = reader["Comment"].ToString();
+        *         var sanitizedComment = HttpUtility.HtmlEncode(comment);
+        *         Response.Write(sanitizedComment);
+        *     }
+        *     reader.Close();
+        * }
+        *************************************************************************************/
+    HtmlEncode() encodes special characters, blocking XSS.
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 
+
+
+
+
+__________________________________________________________________________________________
+
+
+TASK 5 Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+TASK 5 Saving the output
+
+Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
+
+Normal
+
+    Save scan results in normal format using -oN FILENAME. Example:
+           
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
+        * Nmap scan report for 10.48.152.80
+        * Host is up (0.00086s latency).
+        * Not shown: 994 closed ports
+        * PORT    STATE SERVICE VERSION
+        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
+        * 25/tcp  open  smtp    Postfix smtpd
+        * 80/tcp  open  http    nginx 1.6.2
+        * 110/tcp open  pop3    Dovecot pop3d
+        * 111/tcp open  rpcbind 2-4 (RPC #100000)
+        * 143/tcp open  imap    Dovecot imapd
+        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
+        * Device type: general purpose
+        * Running: Linux 3.X
+        * OS CPE: cpe:/o:linux:linux_kernel:3.13
+        * OS details: Linux 3.13
+        * Network Distance: 1 hop
+        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+        *
+        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+Grepable
+
+    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
+
+        /*************************************************************************************
+        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
+        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
+        * Host: 10.48.152.80	Status: Up
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
+        *************************************************************************************/
+
+    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
+    Grepable output includes the IP, providing complete information per line.
+            
+        /*************************************************************************************
+        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
+        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
+        *************************************************************************************/
+
+XML
+    The third format is XML, saved with -oX FILENAME. 
+    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+
+__________________________________________________________________________________________
+
+
+
+
+Appendix:
