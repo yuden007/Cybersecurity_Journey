@@ -61,7 +61,7 @@ TASK
 __________________________________________________________________________________________
 
 
-TASK 5 Saving the output
+TASK n Saving the output
 
 Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
 
@@ -121,7 +121,7 @@ XML
 __________________________________________________________________________________________
 
 
-TASK 5 Saving the output
+TASK n+1 Saving the output
 
 Save Nmap scan results to a file using formats like Normal, Grepable, or XML. 
 

