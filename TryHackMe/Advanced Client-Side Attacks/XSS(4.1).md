@@ -1,9 +1,3 @@
----
-title: XSS Vulnerabilities
----
-
----
-
 # TASK 4: Reflected XSS
 
 ## PHP
@@ -28,7 +22,7 @@ Using `htmlspecialchars()` escapes special characters, preventing XSS.
 
 ## JavaScript (Node.js)
 **Vulnerable code:**
-```js
+```
 const express = require('express');
 const app = express();
 
@@ -42,7 +36,7 @@ app.listen(80);
 User input is directly rendered, enabling XSS.
 
 **Fixed code:**
-```js
+```
 const express = require('express');
 const sanitizeHtml = require('sanitize-html');
 
@@ -60,7 +54,7 @@ app.listen(80);
 
 ## Python (Flask)
 **Vulnerable code:**
-```python
+```
 from flask import Flask, request
 
 app = Flask(__name__)
@@ -76,7 +70,7 @@ if __name__ == "__main__":
 User input is not escaped, so XSS is possible.
 
 **Fixed code:**
-```python
+```
 from flask import Flask, request
 from html import escape
 
@@ -95,7 +89,7 @@ if __name__ == "__main__":
 
 ## ASP.NET
 **Vulnerable code:**
-```csharp
+```
 public void Page_Load(object sender, EventArgs e)
 {
     var userInput = Request.QueryString["q"];
@@ -105,7 +99,7 @@ public void Page_Load(object sender, EventArgs e)
 Direct output of user input allows XSS.
 
 **Fixed code:**
-```csharp
+```
 using System.Web;
 
 public void Page_Load(object sender, EventArgs e)
@@ -153,7 +147,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 
 ## JavaScript (Node.js)
 **Vulnerable code:**
-```js
+```
 app.get('/comments', (req, res) => {
   let html = '<ul>';
   for (const comment of comments) {
@@ -166,7 +160,7 @@ app.get('/comments', (req, res) => {
 Comments are rendered as HTML without sanitization, enabling XSS.
 
 **Fixed code:**
-```js
+```
 const sanitizeHtml = require('sanitize-html');
 
 app.get('/comments', (req, res) => {
@@ -183,7 +177,7 @@ app.get('/comments', (req, res) => {
 
 ## Python (Flask)
 **Vulnerable code:**
-```python
+```
 from flask import Flask, request, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 
@@ -211,7 +205,7 @@ def show_comments():
 Comments are displayed without escaping, allowing XSS.
 
 **Fixed code:**
-```python
+```
 from flask import Flask, request, render_template_string
 from flask_sqlalchemy import SQLAlchemy
 from markupsafe import escape
@@ -242,7 +236,7 @@ def show_comments():
 
 ## ASP.NET
 **Vulnerable code:**
-```csharp
+```
 public void SaveComment(string userComment)
 {
     var command = new SqlCommand("INSERT INTO Comments (Comment) VALUES ('" + userComment + "')", connection);
@@ -261,7 +255,7 @@ public void DisplayComments()
 User input is output directly, enabling XSS.
 
 **Fixed code:**
-```csharp
+```
 using System.Web;
 
 public void SaveComment(string userComment)
@@ -311,7 +305,7 @@ document
 ```
 The DOM tree starts at document, branching into DOCTYPE and html, which contains head and body. The head includes title, meta tags, and style; the body contains a div with h1 and p elements.
 
-```js
+```
 let div = document.createElement("div");
 let p = document.createElement("p");
 div.append(p);
@@ -380,4 +374,4 @@ The previous attempt does not work now. We can see that:
 
 ---
 
-## Appendix
+# Appendix
