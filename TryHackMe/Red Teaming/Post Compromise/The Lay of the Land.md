@@ -51,18 +51,15 @@ It stores data on users, computers, printers, etc., including passwords, groups,
 
 The AD controller is in a server subnet, with clients in a separate network joining via firewall.
 
-Key AD components include:
-
-- Domain Controllers: Windows servers providing AD services, controlling the domain, encrypting data, and managing access to users, groups, policies, and computers.
-- Organizational Units: Hierarchical containers within the AD domain.
-- AD objects:
-  - Users: A security principal that is allowed to authenticate to machines in the domain.
-  - Computers: A special type of user accounts.
-  - GPOs: Group Policy Objects, a collections of policies that are applied to other AD objects.
-- AD Domains: Collections of Microsoft components in an AD network.
-- AD Forest: Collection of trusting domains.
-- AD Service Accounts: Built-in local users, Domain users, Managed service accounts
-- Domain Administrators: A built-in Active Directory group with full administrative control over the domain.
+| Component              | Description |
+|------------------------|-------------|
+| Domain Controllers     | Windows servers providing AD services, controlling the domain, encrypting data, and managing access to users, groups, policies, and computers. |
+| Organizational Units   | Hierarchical containers within the AD domain. |
+| AD objects             | - Users: A security principal that is allowed to authenticate to machines in the domain.<br>- Computers: A special type of user accounts.<br>- GPOs: Group Policy Objects, a collections of policies that are applied to other AD objects. |
+| AD Domains             | Collections of Microsoft components in an AD network. |
+| AD Forest              | Collection of trusting domains. |
+| AD Service Accounts    | Built-in local users, Domain users, Managed service accounts. |
+| Domain Administrators  | A built-in Active Directory group with full administrative control over the domain. |
 
 Enumerating AD post-initial access reveals valuable environment details for lateral movement.
 
@@ -82,19 +79,23 @@ After gaining initial access, enumerate users and groups in the Active Directory
 
 Active Directory (AD) contains various accounts:
 
-- Built-in local users: Manage the system locally, not part of AD.
-- Domain user accounts: Use AD services.
-- Managed service accounts: Limited domain accounts for AD services.
-- Domain Administrators: Full control over AD.
+| Account Type             | Description |
+|--------------------------|-------------|
+| Built-in local users     | Manage the system locally, not part of AD. |
+| Domain user accounts     | Use AD services. |
+| Managed service accounts | Limited domain accounts for AD services. |
+| Domain Administrators    | Full control over AD. |
 
 Key AD administrator accounts:
 
-- BUILTIN\Administrator: Local admin on domain controller.
-- Domain Admins: Admin access to all domain resources.
-- Enterprise Admins: In forest root.
-- Schema Admins: Modify domain/forest.
-- Server Operators: Manage domain servers.
-- Account Operators: Manage non-privileged users.
+| Account                  | Description |
+|--------------------------|-------------|
+| BUILTIN\Administrator    | Local admin on domain controller. |
+| Domain Admins            | Admin access to all domain resources. |
+| Enterprise Admins        | In forest root. |
+| Schema Admins            | Modify domain/forest. |
+| Server Operators         | Manage domain servers. |
+| Account Operators        | Manage non-privileged users. |
 
 ### Active Directory (AD) Enum
 
@@ -362,17 +363,16 @@ A firewall filters untrusted traffic based on rules and policies, separating net
 - Proxy firewalls
 - NAT firewalls
 - Web application firewalls
-
 ### Security Information and Event Management (SIEM)
 
 SIEM combines SIM and SEM to monitor and analyze events in real-time, helping detect threats and vulnerabilities.
 
-Functions include:
-
-- Log management: Captures and gathers data for the entire network.
-- Event analytics: Applies analytics to detect abnormal patterns.
-- Incident monitoring and security alerts: Monitors network and alerts on attacks.
-- Compliance management and reporting: Generates real-time reports.
+| Function                              | Description |
+|---------------------------------------|-------------|
+| Log management                        | Captures and gathers data for the entire network. |
+| Event analytics                       | Applies analytics to detect abnormal patterns. |
+| Incident monitoring and security alerts | Monitors network and alerts on attacks. |
+| Compliance management and reporting   | Generates real-time reports. |
 
 SIEM detects threats like insider attacks, phishing, DDoS, and data exfiltration using threat intelligence and AI.
 
