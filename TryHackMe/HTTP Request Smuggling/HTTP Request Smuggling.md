@@ -1,0 +1,172 @@
+# HTTP Request Smuggling
+
+## TASK 4 Request Smuggling CL.TE
+
+CL.TE = Content-Length/Transfer-Encoding.
+
+How CL.TE request smuggling works
+
+    Craft ambiguous requests interpreted differently by each server. 
+    For example, sending a request with both Content-Length and Transfer-Encoding headers:
+        - The front-end server uses Content-Length and thinks the request ends at a certain point.
+        - The back-end server uses Transfer-Encoding and interprets the request differently, leading to unexpected behaviour.
+
+Exploiting CL.TE for Request Smuggling
+
+    To exploit CL.TE, craft a request with both headers so the front-end and back-end servers interpret boundaries differently.
+
+Sample Request
+
+        ```
+        POST /search HTTP/1.1
+        Host: example.com
+        Content-Length: 130
+        Transfer-Encoding: chunked
+
+        0
+
+        POST /update HTTP/1.1
+        Host: example.com
+        Content-Length: 13
+        Content-Type: application/x-www-form-urlencoded
+
+        isadmin=true
+        ```
+
+    In this payload:
+        - The front-end server sees Content-Length: 130 and believes the request ends after isadmin=true.
+        - The back-end server sees Transfer-Encoding: chunked and interprets the 0 as the end of a chunk, making the second request the start of a new chunk.
+        - The back-end server may treat POST /update HTTP/1.1 as a separate, new request, potentially giving unauthorized access.
+
+Incorrect Content-Length
+
+    If Content-Length does not match the actual body length, the server may process only the portion matching Content-Length. 
+    For example, if the body is 24 bytes:
+
+        ```
+        username=test&query=test
+        ```
+
+    - Setting Content-Length lower than the actual size (e.g., 10 bytes) means the server only considers the first 10 bytes, leading to incomplete data being processed.
+    - To verify, check the /submissions directory to see if the whole body was saved in the .txt file.
+
+## TASK 5 Request Smuggling TE.CL
+
+TE.CL (Transfer-Encoding/Content-Length) is the opposite of CL.TE.
+
+How TE.CL request smuggling works
+
+    Craft ambiguous requests interpreted differently by each server. 
+    For example, sending a request with both Content-Length and Transfer-Encoding headers:
+        - The front-end server uses Transfer-Encoding and processes the request as chunked.
+        - The back-end server uses Content-Length and processes only the specified number of bytes, potentially leading to unexpected behaviour.
+
+Exploiting TE.CL for Request Smuggling
+
+    To exploit TE.CL, craft a request with both headers so the front-end and back-end servers interpret boundaries differently.
+
+Sample Request
+
+        ```
+        POST / HTTP/1.1
+        Host: example.com
+        Content-Length: 4
+        Transfer-Encoding: chunked
+
+        78
+        POST /update HTTP/1.1
+        Host: example.com
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 15
+
+        isadmin=true
+        0
+        ```
+
+    In this payload:
+        - The front-end server sees Transfer-Encoding: chunked and processes everything up to the 0 as the body.
+        - The back-end server uses Content-Length: 4 and processes only the first 4 bytes, treating the rest as a new request.
+        - The smuggled request (POST /update) may be processed as a separate, unauthorized request.
+
+## TASK 6 Transfer Encoding Obfuscation (TE.TE)
+
+TE.TE (Transfer-Encoding/Transfer-Encoding)
+
+How TE.TE request smuggling works
+
+    Craft requests with multiple or malformed Transfer-Encoding headers. For example:
+        - The front-end server may process only the first valid Transfer-Encoding header.
+        - The back-end server may interpret malformed headers differently, leading to request boundary confusion.
+
+Exploiting TE.TE for Request Smuggling
+
+    To exploit TE.TE, craft a request with multiple or malformed Transfer-Encoding headers to trigger different interpretations.
+
+Sample Request
+
+        ```
+        POST / HTTP/1.1
+        Host: example.com
+        Content-Length: 4
+        Transfer-Encoding: chunked
+        Transfer-Encoding: chunked1
+
+        4e
+        POST /update HTTP/1.1
+        Host: example.com
+        Content-Length: 15
+
+        isadmin=true
+        0
+        ```
+
+    In this payload:
+        - The front-end server may process the first Transfer-Encoding: chunked and ignore the malformed chunked1.
+        - The back-end server may handle the malformed header differently, possibly processing only the first 4 bytes and treating the rest as a new request.
+        - The smuggled request (POST /update) may be processed as a separate, unauthorized request.
+
+## TASK 7 Walkthrough
+
+Save walkthrough details in a file using a structured format.
+
+Introduction
+
+    The vulnerable environment uses ATS (Apache Traffic Server) as the front-end proxy, Nginx as the back-end, and PHP for dynamic content. 
+    Differences in header prioritization can lead to HTTP request smuggling.
+
+Setup
+
+    - Add httprequestsmuggling.thm to your /etc/hosts file.
+    - Access the web application at http://httprequestsmuggling.thm.
+
+Exploiting the Application
+
+    - Intercept a baseline request using Burp Suite Proxy.
+    - Send the request to Intruder and use the following payload:
+
+        ```
+        POST / HTTP/1.1
+        Host: httprequestsmuggling.thm
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 160
+        Transfer-Encoding: chunked
+
+        0
+
+        POST /contact.php HTTP/1.1
+        Host: httprequestsmuggling.thm
+        Content-Type: application/x-www-form-urlencoded
+        Content-Length: 500
+
+        username=test&query=§
+        ```
+
+    - Configure Intruder for Null payloads and set up a resource pool.
+    - Start the attack and check the /submissions directory for smuggled requests.
+
+Verification
+
+    - Review .txt files in /submissions for captured requests.
+    - Use any discovered credentials to log in to the application.
+
+## Appendix:

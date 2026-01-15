@@ -1,0 +1,46 @@
+Login page contains hint of directory prefix "hmr_" in comment.
+
+---
+
+Find sub-domian with and without prefix "hmr_"
+
+```
+ffuf -u http://TARGET_IP:1337/FUZZ -w /usr/share/wordlists/dirb/common.txt 
+/.htaccess            (Status: 403) [Size: 280]
+/.htpasswd            (Status: 403) [Size: 280]
+/index.php            (Status: 200) [Size: 1326]
+/javascript           (Status: 301) [Size: 326] [--> http://10.82.137.212:1337/javascript/]
+/phpmyadmin           (Status: 301) [Size: 326] [--> http://10.82.137.212:1337/phpmyadmin/]
+/server-status        (Status: 403) [Size: 280]
+/vendor               (Status: 301) [Size: 322] [--> http://10.82.137.212:1337/vendor/]
+
+ffuf -u http://TARGET_IP:1337/hrm_FUZZ -w /usr/share/wordlists/dirb/common.txt 
+/hmr_css
+/hmr_images
+/hmr_js
+/hmr_logs
+```
+
+---
+
+In /hmr_logs/error.logs, we find an email address.
+
+---
+
+Brute-force the OTP page from reset_password. Use Python script as there's rate limiting.
+
+---
+
+Dashboard contains 1st flag. Can run "ls" but other commands are forbidden. 
+We found a key though.
+
+---
+
+Change the jwt header kid to the path of the key.
+Change the jwt payload role to "admin".
+Sign the jwt with the key.
+Replace the signed jwt and command for showing 2nd flag.
+
+---
+
+# Appendix

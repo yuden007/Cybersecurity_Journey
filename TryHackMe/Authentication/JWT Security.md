@@ -1,0 +1,314 @@
+# TASK 2: Token-Based Authentication
+
+Below are the two cURL request examples you can use to interface with the API. 
+For authentication, the following cURL request can be made:
+
+```bash
+/*************************************************************************************
+* curl -H 'Content-Type: application/json' -X POST -d '{ "username" : "user", "password" : "passwordX" }' http://10.49.157.44/api/v1.0/exampleX
+*************************************************************************************/
+```
+
+For user verification, the following cURL request can be made:
+
+```bash
+/*************************************************************************************
+* curl -H 'Authorization: Bearer [JWT token]' http://10.49.157.44/api/v1.0/example2?username=Y
+*************************************************************************************/
+```
+
+---
+
+# TASK 3: JSON Web Tokens
+
+A JWT consists of three components, each Base64Url encoded and separated by dots:
+- Header    - The header usually indicates the type of token, which is JWT, as well as the signing algorithm that is used.
+
+- Payload   - The payload is the body of the token, which contain the claims. 
+            A claim is a piece of information provided for a specific entity. 
+            In JWTs, there are registered claims, which are claims predefined by the JWT standard and public or private claims. 
+            The public and private claims are those which are defined by the developer. 
+            It is worth knowing the difference between public and private claims, but not for security purposes, hence this will not be our focus in this room.
+
+- Signature - The signature is the part of the token that provides a method for verifying the token's authenticity. 
+            The signature is created by using the algorithm specified in the header of the JWT. 
+            Let's dive a bit into the main signing algorithms.
+
+Although there are several different signing algorithms defined in the JWT standard, we only really care about three main ones:
+- None                  - The None algorithm means no algorithm is used for the signature. 
+                        Effectively, this is a JWT without a signature, meaning that the verification of the claims provided in the JWT cannot be verified through the signature.
+
+- Symmetric Signing     - A symmetric signing algorithm, such as HS256, creates the signature by appending a secret value to the header and body of the JWT before generating a hash value. 
+                        Verification of the signature can be performed by any system that has knowledge of the secret key.
+
+- Asymmetric Signing    - An asymmetric signing algorithm, such as RS256, creates the signature by using a private key to sign the header and body of the JWT. 
+                        This is created by generating the hash and then encrypting the hash using the private key. Verification of the signature can be performed by any system that has knowledge of the public key associated with the private key that was used to create the signature.
+
+JWTs can be encrypted (called JWEs), but the key power of JWTs comes from the signature. Once a JWT is signed, it can be sent to the client, who can use this JWT wherever needed. We can have a centralised authentication server that creates the JWTs used on several applications. Each application can then verify the signature of the JWT; if verified, the claims provided within the JWT can be trusted and acted upon.
+
+---
+
+# TASK 4: Sensitive Information Disclosure
+
+## Practical Example
+Let's authenticate to our API using the following cURL request:
+
+```bash
+/*************************************************************************************
+* curl -H 'Content-Type: application/json' -X POST -d '{ "username" : "user", "password" : "password1" }' http://10.49.157.44/api/v1.0/example1
+*************************************************************************************/
+```
+
+This will provide you with a JWT token. 
+Once recovered, decode the body of the JWT to uncover sensitive information. 
+You can decode the body manually or use a website such as JWT.io for this process.
+
+## Development Mistake
+In the example, sensitive information was added to the claim, as shown below:
+
+```python
+/*************************************************************************************
+* payload = {
+*     "username" : username,
+*     "password" : password,
+*     "admin" : 0,
+*     "flag" : "[redacted]"
+* }
+*
+* access_token = jwt.encode(payload, self.secret, algorithm="HS256")
+*************************************************************************************/
+```
+
+## Fix
+Values such as the password or flag should not be added as claims as the JWT will be sent client-side. Instead, these values should be securely stored server-side in the backend. When required, the username can be read from a verified JWT and used to lookup these values, as shown in the example below:
+
+```python
+/*************************************************************************************
+* payload = jwt.decode(token, self.secret, algorithms="HS256")
+*
+* username = payload['username']
+* flag = self.db_lookup(username, "flag")
+*************************************************************************************/
+```
+
+---
+
+# TASK 5: Signature Validation Mistakes
+
+1. ## Not Verifying the Signature
+
+   ### Issue
+   If the server does not verify the signature of the JWT, claims in the JWT can be modified. While uncommon, this can occur in specific endpoints or server-to-server APIs.
+
+   ### Practical Example
+
+   ```bash
+   /*************************************************************************************
+   * curl -H 'Content-Type: application/json' -X POST -d '{ "username" : "user", "password" : "password2" }' http://10.49.157.44/api/v1.0/example2
+   * curl -H 'Authorization: Bearer [JWT Token]' http://10.49.157.44/api/v1.0/example2?username=user
+   *************************************************************************************/
+   ```
+
+   Remove the signature part of the JWT and verify that the endpoint still works. Modify the `admin` claim to `1` to retrieve the flag.
+
+   ### Development Mistake
+
+   ```python
+   /*************************************************************************************
+   * payload = jwt.decode(token, options={'verify_signature': False})
+   *************************************************************************************/
+   ```
+
+   ### Fix
+
+   ```python
+   /*************************************************************************************
+   * payload = jwt.decode(token, self.secret, algorithms="HS256")
+   *************************************************************************************/
+   ```
+
+   ### Exercise
+   Decode the jwt, change username to "admin" and admin to 1, encode then remove the signature (leave the full-stop)
+
+2. ## Downgrading to None
+
+   ### Issue
+   The `None` algorithm allows bypassing signature verification. If developers do not restrict the `None` algorithm, claims can be forged.
+
+   ### Practical Example
+   Modify the `alg` claim in the JWT header to `None` and submit the token. Alter the `admin` claim to recover the flag.
+
+   ### Development Mistake
+
+   ```python
+   /*************************************************************************************
+   * header = jwt.get_unverified_header(token)
+   * signature_algorithm = header['alg']
+   * payload = jwt.decode(token, self.secret, algorithms=signature_algorithm)
+   *************************************************************************************/
+   ```
+
+   ### Fix
+
+   ```python
+   /*************************************************************************************
+   * payload = jwt.decode(token, self.secret, algorithms=["HS256", "HS384", "HS512"])
+   *************************************************************************************/
+   ```
+
+   ### Exercise
+   Decode the jwt, change username to "admin" and admin to 1 and alg tp "None", encode
+
+3. ## Weak Symmetric Secrets
+
+   ### Issue
+   Weak secrets can be cracked offline, allowing attackers to forge tokens.
+
+   ### Practical Example
+   Save the JWT to a file and use a tool like Hashcat:
+
+   ```bash
+   /*************************************************************************************
+   * hashcat -m 16500 -a 0 jwt.txt jwt.secrets.list
+   *************************************************************************************/
+   ```
+
+   ### Development Mistake
+   Using weak or common secrets.
+
+   ### Fix
+   Use a long, random, and secure secret.
+
+   ### Exercise
+   Download jwt common secret words
+
+   ```
+   wget https://raw.githubusercontent.com/wallarm/jwt-secrets/master/jwt.secrets.list
+   hashcat -m 16500 -a 0 thm_jwt.txt jwt.secrets.list
+   ```
+
+4. ## Signature Algorithm Confusion
+
+   ### Issue
+   Mixing symmetric and asymmetric algorithms can lead to confusion. For example, downgrading from `RS256` to `HS256` may allow using the public key as the secret.
+
+   ### Practical Example
+   Use the public key to forge a JWT with the `HS256` algorithm:
+
+   ```python
+   /*************************************************************************************
+   * import jwt
+   *
+   * public_key = "ADD_KEY_HERE"
+   * payload = {
+   *       'username': 'user',
+   *       'admin': 0
+   * }
+   * access_token = jwt.encode(payload, public_key, algorithm="HS256")
+   * print(access_token)
+   *************************************************************************************/
+   ```
+
+   ### Development Mistake
+
+   ```python
+   /*************************************************************************************
+   * payload = jwt.decode(token, self.secret, algorithms=["HS256", "HS384", "HS512", "RS256", "RS384", "RS512"])
+   *************************************************************************************/
+   ```
+
+   ### Fix
+
+   ```python
+   /*************************************************************************************
+   * header = jwt.get_unverified_header(token)
+   * algorithm = header['alg']
+   * payload = ""
+   *
+   * if "RS" in algorithm:
+   *       payload = jwt.decode(token, self.public_key, algorithms=["RS256", "RS384", "RS512"])
+   * elif "HS" in algorithm:
+   *       payload = jwt.decode(token, self.secret, algorithms=["HS256", "HS384", "HS512"])
+   *
+   * username = payload['username']
+   * flag = self.db_lookup(username, "flag")
+   *************************************************************************************/
+   ```
+
+   ### Exercise
+   Put algorithms.py at /usr/lib/python3/dist-packages/jwt/algorithms.py
+   Run the practical code from "Practical Example"
+
+---
+
+# TASK 6: JWT Lifetime
+
+## Token Lifetime
+
+Verify the token's lifetime by checking the exp claim to ensure it hasn't expired before validating the signature.
+If the exp value is too large or missing, tokens may remain valid indefinitely. 
+Unlike cookies, JWTs lack built-in server-side expiration. 
+To revoke tokens early, a blocklist is needed, which undermines decentralization. 
+Choose an appropriate exp value based on the application's needs.
+Another approach is using refresh tokens. Research their use when testing APIs with JWTs.
+
+## Development Mistake
+As mentioned above, the JWT does not have an exp value, meaning it will be persistent. 
+In the event that an exp claim isn't present, most JWT libraries would accept the token as valid if the signature is verified.
+
+## Fix
+An exp value should be added to the claims. Once added, most libraries will include reviewing the expiry time of the JWT into their checks for validity. 
+This can be done as shown in the example below:
+
+```python
+/*************************************************************************************
+* lifetime = datetime.datetime.now() + datetime.timedelta(minutes=5)
+*
+* payload = {
+*     'username' : username,
+*     'admin' : 0,
+*     'exp' : lifetime
+* }
+*
+* access_token = jwt.encode(payload, self.secret, algorithm="HS256")
+*************************************************************************************/
+```
+
+---
+
+# TASK 7: Cross-Service Relay attackers
+
+JWTs are often used with a centralized authentication system serving multiple applications. 
+To restrict access to specific applications, the audience claim can be used. 
+However, if not properly enforced, a Cross-Service Relay attack may occur, leading to privilege escalation.
+
+## The Audience Claim
+
+JWTs can include an audience claim to specify the intended application when a centralized authentication system serves multiple applications. 
+However, enforcement of this claim must occur on the application itself. 
+If not verified, the JWT may still be considered valid through signature verification, leading to potential misuse.
+
+A Cross-Service Relay attack occurs when a user with elevated privileges (e.g., "admin" : true) on one application can use the same JWT to gain unauthorized privileges on another application served by the same authentication system. 
+This happens if the audience claim is not properly verified on the second application, leading to privilege escalation.
+
+## Practical Example
+Authenticate to example7 using the following data segment: '{ "username" : "user", "password" : "password7", "application" : "appA"}'. You will notice that an audience claim is added, but that you are not an admin.
+Use this token in both the admin and user requests you make to example7_appA and example7_appB. You will notice that while appA accepts the token, you are not an admin, and appB does not accept the token as the audience is incorrect.
+Authenticate to example7 using the following data segment: '{ "username" : "user", "password" : "password7", "application" : "appB"}'. You will notice that an audience claim is added again and you are an admin this time.
+In conclusion, we are able to be authenticated as admin in appA while using appB's admin token.
+
+## Development Mistake
+The key issue is that the audience claim is not being verified on appA. This can be either because audience claim verification has been turned off or the audience scope has been set too wide.
+
+## Fix
+The audience claim should be verified when the token is decoded. This can be done as shown in the example below:
+
+```python
+/*************************************************************************************
+* payload = jwt.decode(token, self.secret, audience=["appA"], algorithms="HS256")
+*************************************************************************************/
+```
+
+---
+
+# Appendix

