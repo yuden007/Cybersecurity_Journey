@@ -2,4 +2,4 @@ Make the explanation/introduction shorter, but keep the code/command examples. T
 
 Create a markdown according to this txt file. Must cover every content from this txt file. 
 
-Make the colons align in markdown view.
+Make the colons align in markdown view using tables.

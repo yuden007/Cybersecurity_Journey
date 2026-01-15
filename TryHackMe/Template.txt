@@ -177,10 +177,3 @@ Grepable
 XML
     The third format is XML, saved with -oX FILENAME. 
     Use -oA FILENAME to save in all three formats: normal, grepable, and XML.
-
-__________________________________________________________________________________________
-
-
-
-
-Appendix:
