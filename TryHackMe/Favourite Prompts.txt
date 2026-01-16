@@ -1,5 +1,5 @@
 Make the explanation/introduction shorter, but keep the code/command examples. Then match the format (spacing, newlines, tabs, etc) of TASK # with TASK N as reference.
 
-Create a markdown according to this txt file. Must cover every content from this txt file. 
+Create a markdown .md file according to this txt file. Must cover every content from this txt file. 
 
 Make the colons align in markdown view using tables.
